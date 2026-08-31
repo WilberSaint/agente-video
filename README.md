@@ -58,16 +58,45 @@ Opciones del instalador:
 
 ### Credenciales
 
-| Variable | Para qué | ¿Obligatoria? |
+El guionista construye el cliente sin pasarle credenciales explícitas, así que
+sirve **cualquiera** de los métodos que resuelve el SDK. Hace falta uno:
+
+| Método | Cómo | Cuándo conviene |
 |---|---|---|
-| `ANTHROPIC_API_KEY` | el guionista | **sí** |
-| `CF_ACCOUNT_ID` / `CF_API_TOKEN` | solo si usas Cloudflare para imágenes | no |
-| `WHISPER_MODELO` | ruta a otro `.bin` de whisper | no |
+| Llave de API | `ANTHROPIC_API_KEY` | Servidor propio, scripts locales. Lo normal aquí |
+| Token | `ANTHROPIC_AUTH_TOKEN` | Tokens de corta duración emitidos por ti |
+| Perfil OAuth | `ant auth login` | Uso interactivo; no deja una llave estática en el entorno |
+| Federación de identidades | 4 variables (abajo) | **CI/CD y nubes.** Sin secretos que guardar |
 
 ```powershell
-$env:ANTHROPIC_API_KEY = "sk-ant-..."          # solo esta sesión
-[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY","sk-ant-...","User")   # permanente
+[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY","sk-ant-...","User")
 ```
+
+Opcionales: `CF_ACCOUNT_ID` / `CF_API_TOKEN` (solo si usas Cloudflare para las
+imágenes) y `WHISPER_MODELO` (ruta a otro `.bin`).
+
+`agente-video doctor` dice **cuál se va a aplicar**, no solo si existe.
+
+#### Federación de identidades
+
+No hay llave que guardar: el proveedor de identidad emite un token de corta
+duración y el SDK lo canjea. Requiere las cuatro:
+
+```
+ANTHROPIC_FEDERATION_RULE_ID
+ANTHROPIC_ORGANIZATION_ID
+ANTHROPIC_SERVICE_ACCOUNT_ID
+ANTHROPIC_IDENTITY_TOKEN_FILE   (o ANTHROPIC_IDENTITY_TOKEN)
+```
+
+Necesita un emisor de identidad real —GCP, AWS, Azure o GitHub Actions—, así
+que **en un servidor propio sin proveedor de identidad no aplica**: ahí sigue
+haciendo falta una llave. Donde sí paga es al mover la generación a CI.
+
+> **La trampa que cuesta una tarde:** `ANTHROPIC_API_KEY` **definida pero vacía**
+> gana la precedencia sobre la federación y sobre el perfil de `ant`, y deja
+> todo muerto sin dar ningún error. No la dejes en blanco: elimínala.
+> `doctor` detecta este caso y lo señala.
 
 ---
 

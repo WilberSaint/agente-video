@@ -16,6 +16,7 @@ import (
 	"syscall"
 	"time"
 
+	"agente-video/internal/credenciales"
 	"agente-video/internal/herramientas"
 	"agente-video/internal/perfil"
 	"agente-video/internal/pipeline"
@@ -78,7 +79,11 @@ Opciones de "generar":
   -animacion string  ninguna | pop | karaoke | palabra  (sobrescribe el perfil)
 
 Variables de entorno:
-  ANTHROPIC_API_KEY   llave para el guionista (obligatoria)
+  ANTHROPIC_API_KEY   llave para el guionista. Alternativas: ANTHROPIC_AUTH_TOKEN,
+                      un perfil de "ant auth login", o federación de identidades
+                      (ANTHROPIC_FEDERATION_RULE_ID + ORGANIZATION_ID +
+                      SERVICE_ACCOUNT_ID + IDENTITY_TOKEN_FILE). Hace falta una.
+                      Usa "agente-video doctor" para ver cuál se está aplicando.
   CF_ACCOUNT_ID       cuenta de Cloudflare  (si imagen.proveedor = cloudflare)
   CF_API_TOKEN        token de Cloudflare   (si imagen.proveedor = cloudflare)
   WHISPER_MODELO      ruta al .bin de whisper.cpp (por defecto bin/modelos/ggml-base.bin)
@@ -209,8 +214,21 @@ func cmdDoctor(ctx context.Context) error {
 		fmt.Printf("  [ok]    %-12s %s\n", b.nombre, ruta)
 	}
 
-	fmt.Println("\ncredenciales")
-	revisarVar("ANTHROPIC_API_KEY", true)
+	// El guionista acepta cualquiera de los métodos del SDK, no solo una llave:
+	// federación de identidades y perfiles de `ant auth login` también sirven.
+	fmt.Println("\ncredenciales del guionista")
+	cred := credenciales.Detectar()
+	if cred.Metodo == credenciales.Ninguno {
+		fmt.Println("  [FALTA] ninguna credencial configurada")
+		faltan++
+	} else {
+		fmt.Printf("  [ok]    %s\n", cred.Metodo)
+	}
+	for _, aviso := range cred.Avisos {
+		fmt.Printf("  [AVISO] %s\n", aviso)
+	}
+
+	fmt.Println("\ncredenciales opcionales")
 	revisarVar("CF_ACCOUNT_ID", false)
 	revisarVar("CF_API_TOKEN", false)
 
