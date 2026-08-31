@@ -47,6 +47,9 @@ func (w *Whisper) Generar(ctx context.Context, req proveedor.PeticionSubtitulos)
 		idioma = "auto"
 	}
 
+	// Pedimos una palabra por segmento en vez de líneas ya armadas. Con tiempos
+	// por palabra podemos animar los subtítulos y agrupar las líneas nosotros,
+	// que es más control por el mismo costo: whisper corre una sola vez.
 	binario := binarioDisponible()
 	if _, err := herramientas.Correr(ctx, binario,
 		"-m", w.modelo,
@@ -54,8 +57,8 @@ func (w *Whisper) Generar(ctx context.Context, req proveedor.PeticionSubtitulos)
 		"-l", idioma,
 		"-osrt",
 		"-of", prefijo,
-		"-ml", "24", // líneas cortas: legibles en vertical
-		"-sow",      // partir en palabra, no a media palabra
+		"-ml", "1", // un token por segmento
+		"-sow", // cortar en palabra, no a media palabra
 	); err != nil {
 		return err
 	}

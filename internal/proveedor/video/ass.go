@@ -11,74 +11,220 @@ import (
 	"agente-video/internal/perfil"
 )
 
-// Este archivo existe por una razón concreta.
+// Este archivo genera el ASS de subtítulos. Existe por dos razones.
 //
-// El filtro subtitles= de ffmpeg convierte el SRT a ASS usando un lienzo fijo
-// de 384x288, y force_style se interpreta en ESE espacio, no en píxeles del
-// video. Con un video de 1080x1920, un MarginV=300 empuja el texto fuera de un
-// lienzo de 288 de alto: los subtítulos desaparecen, sin error y con ffmpeg
-// saliendo en 0.
+// La primera: el filtro subtitles= de ffmpeg convierte el SRT a ASS sobre un
+// lienzo fijo de 384x288, y force_style se interpreta en ESE espacio, no en
+// píxeles del video. Con un video de 1080x1920, un MarginV=300 empuja el texto
+// fuera de un lienzo de 288 de alto: los subtítulos desaparecen, sin error y
+// con ffmpeg saliendo en 0. Generándolo nosotros con PlayRes igual al video,
+// cada valor del perfil está en píxeles reales.
 //
-// Generamos entonces el ASS nosotros, con PlayResX/PlayResY iguales al video.
-// Así cada valor del perfil está en píxeles reales y lo que se configura es lo
-// que se ve.
+// La segunda: ASS permite animar con etiquetas de override, y ahí es donde se
+// consiguen los efectos de subtítulo que se usan en video vertical. whisper nos
+// da tiempos por palabra, así que podemos animar palabra por palabra sin
+// depender de ninguna librería extra.
 
-type lineaSubtitulo struct {
+type palabra struct {
 	inicio time.Duration
 	fin    time.Duration
 	texto  string
 }
 
-// generarASS convierte el SRT de whisper en un ASS con el estilo del perfil.
+// grupo es una línea de subtítulo: varias palabras que se muestran juntas.
+type grupo struct {
+	palabras []palabra
+}
+
+func (g grupo) inicio() time.Duration { return g.palabras[0].inicio }
+func (g grupo) fin() time.Duration    { return g.palabras[len(g.palabras)-1].fin }
+
+func (g grupo) texto() string {
+	partes := make([]string, len(g.palabras))
+	for i, p := range g.palabras {
+		partes[i] = p.texto
+	}
+	return strings.Join(partes, " ")
+}
+
+// generarASS convierte el SRT palabra-por-palabra de whisper en un ASS
+// con el estilo y la animación que pide el perfil.
 func generarASS(rutaSRT, destino string, p *perfil.Perfil, fuente string) error {
-	lineas, err := leerSRT(rutaSRT)
+	palabras, err := leerSRT(rutaSRT)
 	if err != nil {
 		return err
 	}
-	if len(lineas) == 0 {
+	if len(palabras) == 0 {
 		return fmt.Errorf("%s no contiene subtítulos", rutaSRT)
 	}
 
-	negrita := 0
-	if p.Subtitulos.TamPx > 0 {
-		negrita = -1 // en ASS, -1 es verdadero
-	}
-	// Márgenes laterales generosos: en vertical el texto no debe tocar el borde.
-	margenLateral := p.Formato.Ancho / 12
+	s := p.Subtitulos
+	grupos := agrupar(palabras, s.PalabrasPorLinea)
 
 	var b strings.Builder
-	fmt.Fprintf(&b, "[Script Info]\n")
-	fmt.Fprintf(&b, "; generado por agente-video\n")
-	fmt.Fprintf(&b, "ScriptType: v4.00+\n")
-	fmt.Fprintf(&b, "PlayResX: %d\n", p.Formato.Ancho)
-	fmt.Fprintf(&b, "PlayResY: %d\n", p.Formato.Alto)
-	fmt.Fprintf(&b, "ScaledBorderAndShadow: yes\n")
-	fmt.Fprintf(&b, "WrapStyle: 0\n\n")
+	escribirCabecera(&b, p, fuente)
 
-	fmt.Fprintf(&b, "[V4+ Styles]\n")
-	fmt.Fprintf(&b, "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "+
-		"OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, "+
-		"Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, "+
-		"MarginV, Encoding\n")
-	fmt.Fprintf(&b, "Style: Default,%s,%d,%s,%s,%s,&H00000000,%d,0,0,0,100,100,0,0,1,%d,0,2,%d,%d,%d,1\n\n",
-		fuente,
-		p.Subtitulos.TamPx,
-		colorASS(p.Subtitulos.ColorPrimario),
-		colorASS(p.Subtitulos.ColorPrimario),
-		colorASS(p.Subtitulos.ColorBorde),
-		negrita,
-		p.Subtitulos.GrosorBorde,
-		margenLateral, margenLateral,
-		p.Subtitulos.MargenV)
+	b.WriteString("[Events]\n")
+	b.WriteString("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
 
-	fmt.Fprintf(&b, "[Events]\n")
-	fmt.Fprintf(&b, "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-	for _, l := range lineas {
-		fmt.Fprintf(&b, "Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n",
-			tiempoASS(l.inicio), tiempoASS(l.fin), l.texto)
+	switch s.Animacion {
+	case "palabra":
+		eventosPalabraAPalabra(&b, palabras, s)
+	case "karaoke":
+		eventosKaraoke(&b, grupos, s)
+	case "pop":
+		eventosPop(&b, grupos, s)
+	default: // "ninguna" o vacío
+		for _, g := range grupos {
+			dialogo(&b, g.inicio(), g.fin(), "", g.texto())
+		}
 	}
 
 	return os.WriteFile(destino, []byte(b.String()), 0o644)
+}
+
+func escribirCabecera(b *strings.Builder, p *perfil.Perfil, fuente string) {
+	s := p.Subtitulos
+	// Márgenes laterales generosos: en vertical el texto no debe tocar el borde.
+	margenLateral := p.Formato.Ancho / 12
+
+	fmt.Fprintf(b, "[Script Info]\n")
+	fmt.Fprintf(b, "; generado por agente-video\n")
+	fmt.Fprintf(b, "ScriptType: v4.00+\n")
+	fmt.Fprintf(b, "PlayResX: %d\n", p.Formato.Ancho)
+	fmt.Fprintf(b, "PlayResY: %d\n", p.Formato.Alto)
+	fmt.Fprintf(b, "ScaledBorderAndShadow: yes\n")
+	fmt.Fprintf(b, "WrapStyle: 0\n\n")
+
+	fmt.Fprintf(b, "[V4+ Styles]\n")
+	fmt.Fprintf(b, "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "+
+		"OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, "+
+		"Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, "+
+		"MarginV, Encoding\n")
+	fmt.Fprintf(b, "Style: Default,%s,%d,%s,%s,%s,&H64000000,-1,0,0,0,100,100,0,0,1,%d,%d,2,%d,%d,%d,1\n\n",
+		fuente,
+		s.TamPx,
+		colorASS(s.ColorPrimario),
+		colorASS(s.ColorActivo),
+		colorASS(s.ColorBorde),
+		s.GrosorBorde,
+		s.GrosorBorde/2, // una sombra leve despega el texto del fondo
+		margenLateral, margenLateral,
+		s.MargenV)
+}
+
+// eventosPop hace que cada línea entre con un rebote de escala: aparece
+// pequeña, se pasa un poco de tamaño y se asienta. Es el efecto que hace que
+// el subtítulo se sienta "vivo" en lugar de aparecer de golpe.
+func eventosPop(b *strings.Builder, grupos []grupo, s perfil.Subtitulos) {
+	for _, g := range grupos {
+		dialogo(b, g.inicio(), g.fin(), tagsPop(s), g.texto())
+	}
+}
+
+// eventosPalabraAPalabra muestra una sola palabra a la vez, con el mismo
+// rebote. Es el formato más agresivo y el que mejor retiene en vertical.
+func eventosPalabraAPalabra(b *strings.Builder, palabras []palabra, s perfil.Subtitulos) {
+	for i, p := range palabras {
+		fin := p.fin
+		// Estirar hasta la siguiente palabra evita parpadeos entre huecos
+		// cortos, pero sin dejar una palabra colgada en un silencio largo.
+		if i+1 < len(palabras) {
+			if hueco := palabras[i+1].inicio - p.fin; hueco > 0 && hueco < 400*time.Millisecond {
+				fin = palabras[i+1].inicio
+			}
+		}
+		dialogo(b, p.inicio, fin, tagsPop(s), p.texto)
+	}
+}
+
+// eventosKaraoke deja la línea completa en pantalla y resalta la palabra que
+// se está diciendo. Se emite un evento por palabra, cada uno con la línea
+// entera y solo esa palabra coloreada.
+func eventosKaraoke(b *strings.Builder, grupos []grupo, s perfil.Subtitulos) {
+	activo := colorASS(s.ColorActivo)
+
+	for _, g := range grupos {
+		for i, p := range g.palabras {
+			fin := p.fin
+			if i+1 < len(g.palabras) {
+				fin = g.palabras[i+1].inicio // sin huecos dentro de la línea
+			} else {
+				fin = g.fin()
+			}
+
+			partes := make([]string, len(g.palabras))
+			for j, q := range g.palabras {
+				if j == i {
+					// \r devuelve al estilo base después de la palabra activa.
+					partes[j] = fmt.Sprintf(`{\c%s\fscx112\fscy112}%s{\r}`, activo, q.texto)
+				} else {
+					partes[j] = q.texto
+				}
+			}
+			tags := ""
+			if i == 0 {
+				tags = `\fad(70,0)` // solo la primera aparición de la línea funde
+			}
+			dialogo(b, p.inicio, fin, tags, strings.Join(partes, " "))
+		}
+	}
+}
+
+// tagsPop arma el rebote de entrada. Los tiempos de \t son milisegundos
+// relativos al inicio del evento.
+func tagsPop(s perfil.Subtitulos) string {
+	sobre := s.EscalaPop
+	if sobre <= 100 {
+		sobre = 112
+	}
+	inicial := 60
+	return fmt.Sprintf(`\fad(60,50)\fscx%d\fscy%d\t(0,110,\fscx%d\fscy%d)\t(110,190,\fscx100\fscy100)`,
+		inicial, inicial, sobre, sobre)
+}
+
+func dialogo(b *strings.Builder, inicio, fin time.Duration, tags, texto string) {
+	if fin <= inicio {
+		fin = inicio + 300*time.Millisecond
+	}
+	if tags != "" {
+		texto = "{" + tags + "}" + texto
+	}
+	fmt.Fprintf(b, "Dialogue: 0,%s,%s,Default,,0,0,0,,%s\n",
+		tiempoASS(inicio), tiempoASS(fin), texto)
+}
+
+// agrupar junta palabras en líneas. Además del tope de palabras, corta cuando
+// hay una pausa larga: respetar el silencio del narrador se lee mucho mejor
+// que rellenar la línea hasta el límite.
+func agrupar(palabras []palabra, porLinea int) []grupo {
+	if porLinea <= 0 {
+		porLinea = 4
+	}
+	const pausaLarga = 550 * time.Millisecond
+
+	var grupos []grupo
+	var actual []palabra
+
+	cerrar := func() {
+		if len(actual) > 0 {
+			grupos = append(grupos, grupo{palabras: actual})
+			actual = nil
+		}
+	}
+
+	for i, p := range palabras {
+		actual = append(actual, p)
+		if len(actual) >= porLinea {
+			cerrar()
+			continue
+		}
+		if i+1 < len(palabras) && palabras[i+1].inicio-p.fin >= pausaLarga {
+			cerrar()
+		}
+	}
+	cerrar()
+	return grupos
 }
 
 // colorASS normaliza el formato de color: en un archivo ASS los colores van
@@ -108,22 +254,21 @@ func tiempoASS(d time.Duration) string {
 	return fmt.Sprintf("%d:%02d:%02d.%02d", h, m, s, cs)
 }
 
-func leerSRT(ruta string) ([]lineaSubtitulo, error) {
+func leerSRT(ruta string) ([]palabra, error) {
 	f, err := os.Open(ruta)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	var lineas []lineaSubtitulo
-	var actual *lineaSubtitulo
+	var palabras []palabra
+	var actual *palabra
 	var texto []string
 
 	cerrar := func() {
 		if actual != nil && len(texto) > 0 {
-			// \N es el salto de línea de ASS.
-			actual.texto = strings.Join(texto, `\N`)
-			lineas = append(lineas, *actual)
+			actual.texto = strings.Join(texto, " ")
+			palabras = append(palabras, *actual)
 		}
 		actual, texto = nil, nil
 	}
@@ -144,7 +289,7 @@ func leerSRT(ruta string) ([]lineaSubtitulo, error) {
 				return nil, fmt.Errorf("%s: %w", ruta, err)
 			}
 			cerrar()
-			actual = &lineaSubtitulo{inicio: ini, fin: fin}
+			actual = &palabra{inicio: ini, fin: fin}
 			continue
 		}
 		if actual == nil {
@@ -153,7 +298,7 @@ func leerSRT(ruta string) ([]lineaSubtitulo, error) {
 		texto = append(texto, escaparASS(linea))
 	}
 	cerrar()
-	return lineas, sc.Err()
+	return palabras, sc.Err()
 }
 
 func parsearRango(linea string) (time.Duration, time.Duration, error) {
@@ -165,8 +310,12 @@ func parsearRango(linea string) (time.Duration, time.Duration, error) {
 	if err != nil {
 		return 0, 0, err
 	}
+	campos := strings.Fields(strings.TrimSpace(partes[1]))
+	if len(campos) == 0 {
+		return 0, 0, fmt.Errorf("falta el tiempo final en %q", linea)
+	}
 	// Puede traer coordenadas de posición después del tiempo final; se ignoran.
-	fin, err := parsearTiempo(strings.Fields(strings.TrimSpace(partes[1]))[0])
+	fin, err := parsearTiempo(campos[0])
 	if err != nil {
 		return 0, 0, err
 	}
@@ -194,6 +343,6 @@ func parsearTiempo(s string) (time.Duration, error) {
 // escaparASS neutraliza los caracteres con significado propio en ASS, para que
 // una transcripción con llaves no rompa el renderizado.
 func escaparASS(s string) string {
-	r := strings.NewReplacer("{", "\\{", "}", "\\}")
+	r := strings.NewReplacer("{", "(", "}", ")")
 	return r.Replace(s)
 }

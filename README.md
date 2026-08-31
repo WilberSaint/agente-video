@@ -107,8 +107,40 @@ que cambian el resultado de forma notoria:
 | `imagen.personaje` | descripción física repetida en cada prompt, para personajes recurrentes |
 | `video.zoom` | intensidad del Ken Burns. 1.10 es sutil, 1.30 es agresivo |
 | `subtitulos.margen_v` | altura de los subtítulos; súbelo para que no los tape la UI de la app |
+| `subtitulos.animacion` | cómo aparecen los subtítulos. Ver abajo |
 
 Para crear un perfil nuevo, copia `perfiles/demo/` y edita el `id` y el `nombre`.
+
+---
+
+## Subtítulos animados
+
+whisper entrega tiempos **por palabra**, así que los subtítulos se animan sin
+librerías extra: el ASS se genera con etiquetas de override y libass las
+renderiza. Cuatro modos, en `subtitulos.animacion`:
+
+| Modo | Qué hace | Cuándo usarlo |
+|---|---|---|
+| `pop` | La línea entra pequeña, se pasa de tamaño y se asienta | **Predeterminado.** Se ve vivo sin distraer |
+| `karaoke` | La línea se queda y se resalta en color la palabra que se dice | Narración densa, donde ayuda leer la frase completa |
+| `palabra` | Una sola palabra a la vez, grande y centrada | Máxima retención. El más agresivo |
+| `ninguna` | Estáticos | Cuando el contenido manda y el texto solo acompaña |
+
+Se comparan sin editar el perfil, y como solo cambia la etapa 5 el re-render
+tarda segundos:
+
+```powershell
+Remove-Item trabajo\demo\<id-trabajo>\05-final.mp4
+.\agente-video.exe generar -perfil demo -tema "..." -trabajo <id-trabajo> -animacion karaoke
+```
+
+Ajustes finos: `escala_pop` (cuánto se pasa el rebote; 112 es discreto, 130
+exagerado), `palabras_por_linea` (4 va bien en vertical) y `color_activo` para
+karaoke. **Ojo con el color**: en ASS el orden es `&HBBGGRR&`, azul-verde-rojo
+al revés de lo habitual — `&H0000E5FF&` es ámbar, no azul.
+
+En modo `palabra` conviene subir `tam_px` bastante (110-140): hay una sola
+palabra en pantalla y debe llenar el ancho.
 
 ### Sobre la consistencia de personajes
 

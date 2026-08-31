@@ -75,6 +75,7 @@ Opciones de "generar":
   -salida    string  carpeta de videos terminados  (por defecto "salida")
   -bin       string  carpeta de binarios externos  (por defecto "bin")
   -reintentos int    reintentos por imagen         (por defecto 3)
+  -animacion string  ninguna | pop | karaoke | palabra  (sobrescribe el perfil)
 
 Variables de entorno:
   ANTHROPIC_API_KEY   llave para el guionista (obligatoria)
@@ -94,6 +95,7 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	dirSalida := fs.String("salida", "salida", "carpeta de salida")
 	dirBin := fs.String("bin", "bin", "carpeta de binarios")
 	reintentos := fs.Int("reintentos", 3, "reintentos por imagen")
+	animacion := fs.String("animacion", "", "sobrescribe subtitulos.animacion del perfil")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -106,6 +108,15 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	p, err := perfil.Cargar(*dirPerfiles, *idPerfil)
 	if err != nil {
 		return err
+	}
+	// Override para comparar estilos de subtítulo sin tocar el perfil. Como el
+	// video es la única etapa afectada, basta con borrar 05-final.mp4 para
+	// re-renderizar en segundos reutilizando el resto de checkpoints.
+	if *animacion != "" {
+		p.Subtitulos.Animacion = *animacion
+		if err := p.Validar(); err != nil {
+			return err
+		}
 	}
 
 	provs, err := construirProveedores(p)

@@ -35,7 +35,11 @@
     "color_primario": "&H00FFFFFF&",
     "color_borde": "&H00000000&",
     "grosor_borde": 5,
-    "margen_v": 300
+    "margen_v": 300,
+    "animacion": "pop",
+    "palabras_por_linea": 4,
+    "color_activo": "&H0000E5FF&",
+    "escala_pop": 112
   },
 
   "video": {

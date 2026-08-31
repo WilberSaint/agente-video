@@ -74,7 +74,7 @@ func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrab
 	rutaGuion := filepath.Join(dir, "01-guion.json")
 	dirImgs := filepath.Join(dir, "02-imagenes")
 	rutaVoz := filepath.Join(dir, "03-voz.wav")
-	rutaSRT := filepath.Join(dir, "04-subs.srt")
+	rutaSRT := filepath.Join(dir, "04-palabras.srt")
 	rutaVideo := filepath.Join(dir, "05-final.mp4")
 
 	// --- Etapa 1: guion ---

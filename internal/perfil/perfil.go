@@ -25,9 +25,9 @@ type Guion struct {
 }
 
 type Imagen struct {
-	Proveedor  string `json:"proveedor"`  // pollinations | cloudflare
+	Proveedor  string `json:"proveedor"` // pollinations | cloudflare
 	Modelo     string `json:"modelo"`
-	Estilo     string `json:"estilo"`     // se añade a TODOS los prompts
+	Estilo     string `json:"estilo"` // se añade a TODOS los prompts
 	Negativo   string `json:"negativo"`
 	Semilla    int64  `json:"semilla"`    // fija = mayor consistencia entre escenas
 	Referencia string `json:"referencia"` // ruta relativa dentro del perfil
@@ -48,7 +48,19 @@ type Subtitulos struct {
 	ColorBorde    string `json:"color_borde"`
 	GrosorBorde   int    `json:"grosor_borde"`
 	MargenV       int    `json:"margen_v"`
+
+	// Animacion: ninguna | pop | karaoke | palabra
+	//   pop     – la línea entra con un rebote de escala
+	//   karaoke – la línea se queda y se resalta la palabra que se dice
+	//   palabra – una sola palabra a la vez, con rebote
+	Animacion        string `json:"animacion"`
+	PalabrasPorLinea int    `json:"palabras_por_linea"`
+	ColorActivo      string `json:"color_activo"` // palabra resaltada en karaoke
+	EscalaPop        int    `json:"escala_pop"`   // % de sobre-escala del rebote
 }
+
+// AnimacionesValidas son los modos que entiende el generador de subtítulos.
+var AnimacionesValidas = []string{"ninguna", "pop", "karaoke", "palabra"}
 
 type Video struct {
 	Proveedor     string  `json:"proveedor"` // kenburns  (futuro: sora | kling | runway)
@@ -168,6 +180,18 @@ func (p *Perfil) aplicarValoresPorDefecto() {
 	if p.Subtitulos.MargenV == 0 {
 		p.Subtitulos.MargenV = 260
 	}
+	if p.Subtitulos.Animacion == "" {
+		p.Subtitulos.Animacion = "pop"
+	}
+	if p.Subtitulos.PalabrasPorLinea == 0 {
+		p.Subtitulos.PalabrasPorLinea = 4
+	}
+	if p.Subtitulos.ColorActivo == "" {
+		p.Subtitulos.ColorActivo = "&H0000E5FF&" // ámbar; en ASS el orden es BGR
+	}
+	if p.Subtitulos.EscalaPop == 0 {
+		p.Subtitulos.EscalaPop = 112
+	}
 }
 
 func (p *Perfil) Validar() error {
@@ -179,6 +203,19 @@ func (p *Perfil) Validar() error {
 	}
 	if p.Voz.Proveedor == "piper" && p.Voz.Modelo == "" {
 		return fmt.Errorf("perfil %s: voz.proveedor=piper requiere voz.modelo (ruta al .onnx)", p.ID)
+	}
+	if p.Subtitulos.Activos {
+		valida := false
+		for _, a := range AnimacionesValidas {
+			if p.Subtitulos.Animacion == a {
+				valida = true
+				break
+			}
+		}
+		if !valida {
+			return fmt.Errorf("perfil %s: subtitulos.animacion=%q no existe; use uno de: %s",
+				p.ID, p.Subtitulos.Animacion, strings.Join(AnimacionesValidas, ", "))
+		}
 	}
 	return nil
 }
