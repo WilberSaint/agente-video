@@ -1,0 +1,14 @@
+# Binarios externos y modelos: los descarga instalar.ps1 (cientos de MB)
+/bin/
+
+# Checkpoints y videos generados
+/trabajo/
+/salida/
+
+# Ejecutable compilado. Va anclado con "/" para no excluir por accidente el
+# directorio cmd/agente-video/, que sí es código fuente.
+/agente-video
+/agente-video.exe
+
+# Credenciales
+.env

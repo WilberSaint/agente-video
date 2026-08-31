@@ -1,0 +1,49 @@
+{
+  "id": "demo",
+  "nombre": "Demo — historias de misterio",
+  "idioma": "es",
+
+  "formato": { "ancho": 1080, "alto": 1920, "fps": 30 },
+
+  "guion": {
+    "tono": "íntimo y en segunda persona, como quien cuenta un secreto en voz baja; frases cortas",
+    "duracion_seg": 45,
+    "escenas": 6,
+    "instrucciones_extra": "Nunca reveles el desenlace antes de la última escena."
+  },
+
+  "imagen": {
+    "proveedor": "pollinations",
+    "modelo": "flux",
+    "estilo": "cinematic photography, moody volumetric lighting, 35mm film grain, desaturated teal and amber palette, shallow depth of field, no text",
+    "negativo": "text, watermark, logo, deformed hands, extra limbs, low quality",
+    "semilla": 1470,
+    "referencia": "referencia/",
+    "personaje": ""
+  },
+
+  "voz": {
+    "proveedor": "piper",
+    "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+    "velocidad": 1.0
+  },
+
+  "subtitulos": {
+    "activos": true,
+    "fuente": "Arial",
+    "tam_px": 78,
+    "color_primario": "&H00FFFFFF&",
+    "color_borde": "&H00000000&",
+    "grosor_borde": 5,
+    "margen_v": 300
+  },
+
+  "video": {
+    "proveedor": "kenburns",
+    "transicion": "fade",
+    "transicion_seg": 0.6,
+    "zoom": 1.18,
+    "musica": "",
+    "volumen_musica": 0.12
+  }
+}
