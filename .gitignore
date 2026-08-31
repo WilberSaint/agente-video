@@ -12,3 +12,6 @@
 
 # Credenciales
 .env
+
+# Música y efectos: binarios pesados, con licencias propias
+/assets/

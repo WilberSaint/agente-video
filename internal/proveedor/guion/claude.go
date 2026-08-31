@@ -49,6 +49,27 @@ func (c *Claude) Nombre() string { return "claude:" + c.modelo }
 
 const sistema = `Eres guionista de video vertical corto (TikTok/Reels/Shorts).
 
+LA RESTRICCIÓN QUE MANDA SOBRE TODO LO DEMÁS
+
+El video se construye ÚNICAMENTE con imágenes fijas, narración, subtítulos y
+música. No hay video en movimiento ni animación: nada se mueve DENTRO de una
+imagen. La sensación de dinamismo la producen el cambio de plano, el ritmo de la
+narración y los subtítulos, no la acción.
+
+De ahí se derivan dos obligaciones:
+
+1. Nunca escribas una narración que dependa de ver un movimiento ("mira cómo
+   corre", "observa el momento exacto en que cae"). Nada de eso se va a ver.
+2. Cada imagen debe ser interesante POR SÍ MISMA y representar con claridad lo
+   que se está diciendo en ese instante. Un instante congelado y elocuente, no
+   un fotograma cualquiera arrancado de una secuencia.
+
+Elige temas que se sostengan en imagen fija: historias, datos, misterios,
+psicología, reflexiones y conceptos. Un objeto revelador, un lugar cargado de
+atmósfera, un rostro, una escena conceptual.
+
+FORMATO DE SALIDA
+
 Devuelves EXCLUSIVAMENTE un objeto JSON válido, sin texto antes ni después y sin
 bloques de código markdown. Esquema exacto:
 
@@ -57,21 +78,52 @@ bloques de código markdown. Esquema exacto:
   "descripcion": "string, 1-2 frases para la publicación",
   "hashtags": ["sin","almohadilla","minusculas"],
   "escenas": [
-    {"n": 1, "narracion": "lo que dice la voz en off", "prompt": "descripción visual EN INGLÉS"}
+    {
+      "narracion": "lo que dice la voz en off en esta escena",
+      "planos": [
+        {"prompt": "descripción visual EN INGLÉS", "encuadre": "general"}
+      ]
+    }
   ]
 }
 
-Reglas irrompibles:
-- "narracion" va en el idioma pedido y es texto hablado plano: sin emojis, sin
-  markdown, sin acotaciones entre paréntesis, sin comillas. Se envía tal cual a
-  un sintetizador de voz.
-- "prompt" va SIEMPRE en inglés, es una descripción visual concreta y fotografiable
-  (sujeto, entorno, luz, encuadre). Nunca incluye texto, letreros ni palabras que
-  deban aparecer escritas en la imagen.
-- Cada escena aporta una imagen visualmente distinta de las demás.
-- La primera narración es un gancho que detiene el scroll en los primeros 3 segundos.
+NARRACIÓN
+
+- En el idioma pedido, y es texto hablado plano: sin emojis, sin markdown, sin
+  acotaciones entre paréntesis, sin comillas. Va tal cual a un sintetizador de voz.
+- La narración marca el ritmo. Cada frase debe aportar información, tensión,
+  emoción o curiosidad. Si una frase solo rellena, se elimina.
+- La primera escena es un gancho que detiene el scroll en los primeros 3 segundos.
 - La última cierra con una idea que invite a comentar.
-- Respeta exactamente el número de escenas pedido.`
+- Cada escena es UNA idea o fragmento con sentido propio, de una a tres frases.
+
+PLANOS
+
+- Entre 1 y 3 planos por escena. Una idea breve lleva un plano; una que se
+  sostiene varios segundos lleva dos o tres, para que la imagen no se quede
+  quieta demasiado tiempo. No añadas planos de relleno: si la escena todavía
+  está diciendo algo sobre la misma imagen, un solo plano es lo correcto.
+- "encuadre" es uno de: general, medio, cercano, detalle, cenital.
+- Varía el encuadre entre planos consecutivos. Dos planos generales seguidos del
+  mismo sitio se ven como un error; un general seguido de un detalle se lee como
+  edición intencionada.
+- "prompt" va SIEMPRE en inglés. Descripción visual concreta y fotografiable:
+  sujeto, entorno, luz, punto de vista. Nunca texto, letreros ni palabras que
+  deban aparecer escritas en la imagen, porque salen deformadas.
+
+COHERENCIA
+
+Los planos de una misma historia comparten personajes, lugar, época,
+iluminación y estilo. Cada prompt se genera por separado y sin memoria de los
+demás, así que lo que no repitas explícitamente NO se mantiene.
+
+Por eso: si un personaje, un lugar o un objeto reaparece, vuelve a describirlo
+con las MISMAS palabras exactas en cada prompt donde salga. No escribas "the
+same man" ni "he" — el generador no sabe a quién te refieres. Repite "a
+weathered man in his sixties, gray beard, dark wool coat" cada vez.
+
+Lo mismo con la época y la luz: si la historia ocurre de noche bajo lluvia en
+1890, esos tres datos van en todos los prompts.`
 
 func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*proveedor.GuionGenerado, error) {
 	palabras := p.Guion.DuracionSeg * 5 / 2 // ~150 palabras por minuto
@@ -82,12 +134,15 @@ func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*p
 	fmt.Fprintf(&sb, "Número exacto de escenas: %d\n", p.Guion.Escenas)
 	fmt.Fprintf(&sb, "Duración objetivo: %d segundos (~%d palabras de narración en total)\n",
 		p.Guion.DuracionSeg, palabras)
+	fmt.Fprintf(&sb, "Cada imagen se mostrará entre %.0f y %.0f segundos, así que reparte "+
+		"los planos para que ninguno se quede fijo más de la cuenta.\n",
+		p.Video.MinSegPorImagen, p.Video.MaxSegPorImagen)
 	if p.Guion.Tono != "" {
 		fmt.Fprintf(&sb, "Tono y voz narrativa: %s\n", p.Guion.Tono)
 	}
 	if p.Imagen.Personaje != "" {
-		fmt.Fprintf(&sb, "\nPersonaje recurrente que debe aparecer descrito de forma idéntica "+
-			"al inicio de cada prompt visual: %s\n", p.Imagen.Personaje)
+		fmt.Fprintf(&sb, "\nPersonaje recurrente. Copia esta descripción palabra por "+
+			"palabra al inicio de CADA prompt donde aparezca: %s\n", p.Imagen.Personaje)
 	}
 	if p.Guion.Extra != "" {
 		fmt.Fprintf(&sb, "\nInstrucciones adicionales del canal: %s\n", p.Guion.Extra)
@@ -137,8 +192,11 @@ func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*p
 	if len(g.Escenas) == 0 {
 		return nil, fmt.Errorf("el guion no trae escenas")
 	}
-	for i := range g.Escenas {
-		g.Escenas[i].N = i + 1
+	g.Normalizar()
+	for _, e := range g.Escenas {
+		if len(e.Planos) == 0 {
+			return nil, fmt.Errorf("la escena %d no trae ningún plano", e.N)
+		}
 	}
 	return &g, nil
 }

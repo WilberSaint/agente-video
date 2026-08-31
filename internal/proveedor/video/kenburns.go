@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"agente-video/internal/herramientas"
 	"agente-video/internal/proveedor"
@@ -42,7 +43,9 @@ func (k *KenBurns) Nombre() string { return "kenburns(ffmpeg)" }
 
 func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) error {
 	p := req.Perfil
-	n := len(req.Imagenes)
+	imagenes := req.Imagenes()
+	encuadres := aplanarEncuadres(req.Escenas)
+	n := len(imagenes)
 	if n == 0 {
 		return fmt.Errorf("no hay imágenes que ensamblar")
 	}
@@ -51,49 +54,71 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	if err != nil {
 		return fmt.Errorf("midiendo la narración: %w", err)
 	}
+	total := time.Duration(duracionAudio * float64(time.Second))
 
 	trans := p.Video.TransicionSeg
-	// Con n escenas hay n-1 transiciones; cada una "come" tiempo de dos escenas.
+	// Con n imágenes hay n-1 transiciones; cada una "come" tiempo de dos.
 	if trans*float64(n-1) >= duracionAudio*0.5 {
 		trans = duracionAudio * 0.5 / math.Max(1, float64(n-1))
 	}
-	// Duración por escena para que el total case exacto con el audio:
-	//   n*d - (n-1)*trans = duracionAudio
-	d := (duracionAudio + float64(n-1)*trans) / float64(n)
+
+	// Cada imagen dura lo que dura su parte del relato. Sin los tiempos por
+	// palabra no hay forma de saberlo y se cae al reparto uniforme.
+	var palabras []palabra
+	if req.SRT != "" {
+		if ps, err := leerSRT(req.SRT); err == nil {
+			palabras = ps
+		} else {
+			k.avisar("no se pudieron leer los tiempos de %s (%v); las imágenes "+
+				"cambiarán a intervalos iguales", req.SRT, err)
+		}
+	}
+	tramos := repartir(req.Escenas, palabras, total,
+		p.Video.MinSegPorImagen, p.Video.MaxSegPorImagen)
 
 	fps := p.Formato.FPS
 	anchoEsc := parEntero(int(float64(p.Formato.Ancho) * factorEscala))
 	altoEsc := parEntero(int(float64(p.Formato.Alto) * factorEscala))
-	frames := int(math.Round(d * float64(fps)))
 
 	var args []string
 	args = append(args, "-y", "-loglevel", "error", "-stats")
 
 	// Una imagen fija = un frame de entrada; zoompan se encarga de estirarla.
-	for _, img := range req.Imagenes {
+	for _, img := range imagenes {
 		args = append(args, "-i", img)
 	}
 	idxAudio := n
 	args = append(args, "-i", req.Audio)
 
-	idxMusica := -1
-	if req.MusicaSrc != "" {
-		if _, err := os.Stat(req.MusicaSrc); err == nil {
-			idxMusica = n + 1
-			// La música se repite si es más corta que la narración.
-			args = append(args, "-stream_loop", "-1", "-i", req.MusicaSrc)
-		}
-	}
+	// La mezcla decide qué entradas de audio más hacen falta (música, efectos)
+	// y con qué filtros se combinan.
+	mez := construirAudio(p, req, tramos, idxAudio, duracionAudio, k.avisar)
+	args = append(args, mez.entradas...)
 
 	var filtros []string
 
-	for i := range req.Imagenes {
+	// Cada imagen dura lo suyo, así que su zoompan lleva su propio número de
+	// frames. Se le suma la transición porque durante el cruce se ven las dos.
+	duraciones := make([]float64, n)
+	for i := range imagenes {
+		d := tramos[i].dura().Seconds()
+		if i < n-1 {
+			d += trans
+		}
+		duraciones[i] = d
+
+		frames := int(math.Round(d * float64(fps)))
+		if frames < 1 {
+			frames = 1
+		}
+
+		zoomMax := zoomDeEncuadre(p.Video.Zoom, encuadres[i])
 		// Alternamos acercar y alejar para que no se sienta repetitivo.
 		var zoom string
 		if i%2 == 0 {
-			zoom = fmt.Sprintf("'1+(%.4f-1)*on/%d'", p.Video.Zoom, frames)
+			zoom = fmt.Sprintf("'1+(%.4f-1)*on/%d'", zoomMax, frames)
 		} else {
-			zoom = fmt.Sprintf("'%.4f-(%.4f-1)*on/%d'", p.Video.Zoom, p.Video.Zoom, frames)
+			zoom = fmt.Sprintf("'%.4f-(%.4f-1)*on/%d'", zoomMax, zoomMax, frames)
 		}
 		filtros = append(filtros, fmt.Sprintf(
 			"[%d:v]scale=%d:%d:force_original_aspect_ratio=increase,crop=%d:%d,"+
@@ -103,14 +128,16 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 			zoom, frames, p.Formato.Ancho, p.Formato.Alto, fps, i))
 	}
 
-	// Cadena de transiciones: el desplazamiento k-ésimo es k*(d-trans).
+	// Cadena de transiciones. El desplazamiento de cada cruce es el instante en
+	// que termina la imagen anterior, que ya no es un múltiplo fijo.
 	ultimo := "v0"
+	var acumulado float64
 	for i := 1; i < n; i++ {
 		salida := fmt.Sprintf("x%d", i)
-		offset := float64(i) * (d - trans)
+		acumulado += duraciones[i-1] - trans
 		filtros = append(filtros, fmt.Sprintf(
 			"[%s][v%d]xfade=transition=%s:duration=%.3f:offset=%.3f[%s]",
-			ultimo, i, p.Video.Transicion, trans, offset, salida))
+			ultimo, i, p.Video.Transicion, trans, acumulado, salida))
 		ultimo = salida
 	}
 
@@ -140,17 +167,9 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 		}
 	}
 
-	etiquetaAudio := fmt.Sprintf("%d:a", idxAudio)
-	if idxMusica >= 0 {
-		vol := p.Video.VolumenMusica
-		if vol <= 0 {
-			vol = 0.12
-		}
-		filtros = append(filtros,
-			fmt.Sprintf("[%d:a]volume=%.3f[mus]", idxMusica, vol),
-			fmt.Sprintf("[%d:a][mus]amix=inputs=2:duration=first:dropout_transition=0,"+
-				"afade=t=out:st=%.2f:d=1.0[aout]", idxAudio, math.Max(0, duracionAudio-1.0)))
-		etiquetaAudio = "aout"
+	filtros = append(filtros, mez.filtros...)
+	if mez.efectos > 0 {
+		k.avisar("%d efecto(s) de sonido en los cortes", mez.efectos)
 	}
 
 	if err := os.MkdirAll(filepath.Dir(req.Destino), 0o755); err != nil {
@@ -160,7 +179,7 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	args = append(args,
 		"-filter_complex", strings.Join(filtros, ";"),
 		"-map", "["+ultimo+"]",
-		"-map", etiquetaSalida(etiquetaAudio),
+		"-map", "["+mez.etiqueta+"]",
 		"-c:v", "libx264", "-preset", k.Preset, "-crf", fmt.Sprint(k.CRF),
 		"-pix_fmt", "yuv420p", "-r", fmt.Sprint(fps),
 		"-c:a", "aac", "-b:a", "192k",
@@ -175,15 +194,6 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	return nil
 }
 
-// Los mapas de ffmpeg usan corchetes para etiquetas de filtro pero no para
-// flujos de entrada (0:a).
-func etiquetaSalida(e string) string {
-	if strings.Contains(e, ":") {
-		return e
-	}
-	return "[" + e + "]"
-}
-
 func parEntero(v int) int {
 	if v%2 != 0 {
 		return v + 1
@@ -192,3 +202,19 @@ func parEntero(v int) int {
 }
 
 var _ proveedor.Videasta = (*KenBurns)(nil)
+
+// aplanarEncuadres devuelve el encuadre de cada imagen en el orden del video,
+// rellenando con "medio" cuando el guion no lo especificó.
+func aplanarEncuadres(escenas []proveedor.EscenaRender) []string {
+	var out []string
+	for _, e := range escenas {
+		for i := range e.Imagenes {
+			if i < len(e.Encuadres) && e.Encuadres[i] != "" {
+				out = append(out, e.Encuadres[i])
+			} else {
+				out = append(out, "medio")
+			}
+		}
+	}
+	return out
+}

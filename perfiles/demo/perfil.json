@@ -8,7 +8,7 @@
   "guion": {
     "tono": "íntimo y en segunda persona, como quien cuenta un secreto en voz baja; frases cortas",
     "duracion_seg": 45,
-    "escenas": 6,
+    "escenas": 7,
     "instrucciones_extra": "Nunca reveles el desenlace antes de la última escena."
   },
 
@@ -47,7 +47,20 @@
     "transicion": "fade",
     "transicion_seg": 0.6,
     "zoom": 1.18,
-    "musica": "",
-    "volumen_musica": 0.12
+    "musica": "../../assets/musica/u_epz2n8s2sa-gentle-reflections-322721.mp3",
+    "volumen_musica": 0.12,
+
+    "min_seg_por_imagen": 1.8,
+
+    "max_seg_por_imagen": 5.0,
+
+
+    "efecto_transicion": "../../assets/efectos/whoosh.wav",
+
+
+    "volumen_efectos": 0.30,
+
+
+    "efectos_en": "escena"
   }
 }

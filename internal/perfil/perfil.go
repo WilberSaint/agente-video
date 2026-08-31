@@ -69,6 +69,22 @@ type Video struct {
 	Zoom          float64 `json:"zoom"`
 	Musica        string  `json:"musica"`
 	VolumenMusica float64 `json:"volumen_musica"`
+
+	// Cotas de cuánto puede durar una imagen en pantalla. El video se hace con
+	// imágenes fijas: pasado cierto punto la imagen deja de leerse como una
+	// pausa intencionada y se lee como que el video se congeló.
+	MinSegPorImagen float64 `json:"min_seg_por_imagen"`
+	MaxSegPorImagen float64 `json:"max_seg_por_imagen"`
+
+	// EfectoTransicion es un .wav que suena en cada corte. Sin él los cambios
+	// de imagen se ven pero no se oyen, y el video se siente plano aunque la
+	// edición visual sea correcta.
+	EfectoTransicion string  `json:"efecto_transicion"`
+	VolumenEfectos   float64 `json:"volumen_efectos"`
+	// EfectosEn: escena | plano | ninguno.
+	//   escena – solo al cambiar de idea. Es lo que se oye intencionado.
+	//   plano  – en cada imagen. Más agresivo, propio de video muy acelerado.
+	EfectosEn string `json:"efectos_en"`
 }
 
 type Perfil struct {
@@ -158,6 +174,18 @@ func (p *Perfil) aplicarValoresPorDefecto() {
 	}
 	if p.Video.Zoom == 0 {
 		p.Video.Zoom = 1.20
+	}
+	if p.Video.MinSegPorImagen == 0 {
+		p.Video.MinSegPorImagen = 1.8
+	}
+	if p.Video.MaxSegPorImagen == 0 {
+		p.Video.MaxSegPorImagen = 5.0
+	}
+	if p.Video.EfectosEn == "" {
+		p.Video.EfectosEn = "escena"
+	}
+	if p.Video.VolumenEfectos == 0 {
+		p.Video.VolumenEfectos = 0.35
 	}
 	if p.Imagen.Proveedor == "" {
 		p.Imagen.Proveedor = "pollinations"

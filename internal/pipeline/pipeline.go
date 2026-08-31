@@ -84,7 +84,7 @@ func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrab
 	}
 
 	// --- Etapa 2: imágenes ---
-	imagenes, err := pl.etapaImagenes(ctx, p, guion, dirImgs)
+	escenas, err := pl.etapaImagenes(ctx, p, guion, dirImgs)
 	if err != nil {
 		return nil, fmt.Errorf("etapa 2 (imágenes): %w", err)
 	}
@@ -104,7 +104,7 @@ func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrab
 	}
 
 	// --- Etapa 5: ensamblado ---
-	if err := pl.etapaVideo(ctx, p, imagenes, rutaVoz, rutaSRT, rutaVideo); err != nil {
+	if err := pl.etapaVideo(ctx, p, escenas, rutaVoz, rutaSRT, rutaVideo); err != nil {
 		return nil, fmt.Errorf("etapa 5 (video): %w", err)
 	}
 
@@ -129,7 +129,11 @@ func (pl *Pipeline) etapaGuion(ctx context.Context, p *perfil.Perfil, tema, ruta
 	if datos, err := os.ReadFile(ruta); err == nil {
 		var g proveedor.GuionGenerado
 		if json.Unmarshal(datos, &g) == nil && len(g.Escenas) > 0 {
-			pl.opt.Registro("[1/5] guion reutilizado del checkpoint (%d escenas)", len(g.Escenas))
+			// Normalizar convierte los checkpoints del formato anterior, de una
+			// imagen por escena, al de varios planos.
+			g.Normalizar()
+			pl.opt.Registro("[1/5] guion reutilizado del checkpoint (%d escenas, %d imágenes)",
+				len(g.Escenas), g.TotalPlanos())
 			return &g, nil
 		}
 	}
@@ -142,54 +146,77 @@ func (pl *Pipeline) etapaGuion(ctx context.Context, p *perfil.Perfil, tema, ruta
 	if err := os.WriteFile(ruta, datos, 0o644); err != nil {
 		return nil, err
 	}
-	pl.opt.Registro("      «%s» — %d escenas", g.Titulo, len(g.Escenas))
+	pl.opt.Registro("      «%s» — %d escenas, %d imágenes", g.Titulo, len(g.Escenas), g.TotalPlanos())
 	return g, nil
 }
 
-func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil, g *proveedor.GuionGenerado, dir string) ([]string, error) {
+func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
+	g *proveedor.GuionGenerado, dir string) ([]proveedor.EscenaRender, error) {
+
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return nil, err
 	}
-	rutas := make([]string, 0, len(g.Escenas))
+	escenas := make([]proveedor.EscenaRender, 0, len(g.Escenas))
+	total := g.TotalPlanos()
+	hechas := 0
 
 	for _, esc := range g.Escenas {
-		// Sin extensión: el proveedor decide si sale PNG, JPEG o WebP.
-		base := filepath.Join(dir, fmt.Sprintf("escena-%02d", esc.N))
-		if ya := buscarImagen(base); ya != "" {
-			pl.opt.Registro("[2/5] escena %d/%d ya existe, se salta", esc.N, len(g.Escenas))
-			rutas = append(rutas, ya)
-			continue
-		}
+		render := proveedor.EscenaRender{Narracion: esc.Narracion}
 
-		req := proveedor.PeticionImagen{
-			Prompt:   componerPrompt(p, esc.Prompt),
-			Negativo: p.Imagen.Negativo,
-			Semilla:  p.Imagen.Semilla + int64(esc.N),
-			Ancho:    p.Formato.Ancho,
-			Alto:     p.Formato.Alto,
-			Destino:  base,
-		}
+		for j, plano := range esc.Planos {
+			hechas++
+			// Sin extensión: el proveedor decide si sale PNG, JPEG o WebP.
+			base := filepath.Join(dir, fmt.Sprintf("escena-%02d-plano-%d", esc.N, j+1))
+			render.Encuadres = append(render.Encuadres, plano.Encuadre)
 
-		var escrita string
-		var err error
-		for intento := 1; intento <= pl.opt.Reintentos; intento++ {
-			pl.opt.Registro("[2/5] escena %d/%d con %s (intento %d)…",
-				esc.N, len(g.Escenas), pl.prov.Imagenero.Nombre(), intento)
-			if escrita, err = pl.prov.Imagenero.Generar(ctx, req); err == nil {
-				break
+			if ya := buscarImagen(base); ya != "" {
+				pl.opt.Registro("[2/5] imagen %d/%d ya existe, se salta", hechas, total)
+				render.Imagenes = append(render.Imagenes, ya)
+				continue
 			}
-			if ctx.Err() != nil {
-				return nil, ctx.Err()
+
+			req := proveedor.PeticionImagen{
+				Prompt:   componerPrompt(p, plano.Prompt),
+				Negativo: p.Imagen.Negativo,
+				// Semilla distinta por plano: con la misma, dos prompts
+				// parecidos de la misma escena salen casi idénticos.
+				Semilla: p.Imagen.Semilla + int64(esc.N*10+j),
+				Ancho:   p.Formato.Ancho,
+				Alto:    p.Formato.Alto,
+				Destino: base,
 			}
-			pl.opt.Registro("      falló: %v", err)
-			time.Sleep(time.Duration(intento*3) * time.Second)
+
+			var escrita string
+			var err error
+			for intento := 1; intento <= pl.opt.Reintentos; intento++ {
+				pl.opt.Registro("[2/5] imagen %d/%d (escena %d, %s) con %s (intento %d)…",
+					hechas, total, esc.N, encuadreONada(plano.Encuadre),
+					pl.prov.Imagenero.Nombre(), intento)
+				if escrita, err = pl.prov.Imagenero.Generar(ctx, req); err == nil {
+					break
+				}
+				if ctx.Err() != nil {
+					return nil, ctx.Err()
+				}
+				pl.opt.Registro("      falló: %v", err)
+				time.Sleep(time.Duration(intento*3) * time.Second)
+			}
+			if err != nil {
+				return nil, fmt.Errorf("escena %d plano %d tras %d intentos: %w",
+					esc.N, j+1, pl.opt.Reintentos, err)
+			}
+			render.Imagenes = append(render.Imagenes, escrita)
 		}
-		if err != nil {
-			return nil, fmt.Errorf("escena %d tras %d intentos: %w", esc.N, pl.opt.Reintentos, err)
-		}
-		rutas = append(rutas, escrita)
+		escenas = append(escenas, render)
 	}
-	return rutas, nil
+	return escenas, nil
+}
+
+func encuadreONada(e string) string {
+	if e == "" {
+		return "sin encuadre"
+	}
+	return e
 }
 
 // buscarImagen devuelve el archivo de imagen ya generado para una escena,
@@ -230,7 +257,9 @@ func (pl *Pipeline) etapaSubtitulos(ctx context.Context, p *perfil.Perfil, audio
 	})
 }
 
-func (pl *Pipeline) etapaVideo(ctx context.Context, p *perfil.Perfil, imgs []string, audio, srt, destino string) error {
+func (pl *Pipeline) etapaVideo(ctx context.Context, p *perfil.Perfil,
+	escenas []proveedor.EscenaRender, audio, srt, destino string) error {
+
 	if info, err := os.Stat(destino); err == nil && info.Size() > 0 {
 		pl.opt.Registro("[5/5] video ya ensamblado, se salta")
 		return nil
@@ -238,7 +267,7 @@ func (pl *Pipeline) etapaVideo(ctx context.Context, p *perfil.Perfil, imgs []str
 	pl.opt.Registro("[5/5] ensamblando con %s (esta etapa es la lenta)…", pl.prov.Videasta.Nombre())
 	return pl.prov.Videasta.Ensamblar(ctx, proveedor.PeticionVideo{
 		Perfil:    p,
-		Imagenes:  imgs,
+		Escenas:   escenas,
 		Audio:     audio,
 		SRT:       srt,
 		Destino:   destino,

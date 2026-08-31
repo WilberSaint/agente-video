@@ -20,6 +20,95 @@ tema + perfil
 
 ---
 
+## La restricción que define el diseño
+
+El sistema **solo produce imágenes fijas**. No genera video en movimiento ni
+animación: nada se mueve dentro de una imagen. Todo lo demás se deriva de ahí.
+
+El dinamismo no viene del movimiento, viene de la edición:
+
+| Recurso | Cómo se aplica |
+|---|---|
+| **Cambio de plano** | 1-3 imágenes por idea, con encuadres distintos entre sí |
+| **Ritmo del relato** | Cada imagen dura lo que dura su parte de la narración, no un intervalo fijo |
+| **Movimiento simulado** | Ken Burns, con intensidad ajustada al encuadre |
+| **Subtítulos** | Grandes, sincronizados palabra a palabra, con animación de entrada |
+| **Narración** | Cada frase aporta información, tensión, emoción o curiosidad |
+
+Dos consecuencias que el guionista tiene prohibido violar:
+
+1. **Nunca una narración que dependa de ver movimiento** ("mira cómo corre").
+   Eso no se va a ver nunca.
+2. **Cada imagen debe sostenerse sola** y representar con claridad lo que se
+   dice en ese instante. Un instante congelado y elocuente, no un fotograma
+   cualquiera de una secuencia.
+
+Por eso los temas que mejor funcionan son los que se representan bien en imagen
+fija: historias, datos, misterios, psicología, reflexiones y conceptos.
+
+### Las imágenes cambian cuando cambia la idea
+
+Repartir la duración en partes iguales produce un video donde las imágenes
+cambian a destiempo del relato: una idea corta se queda fija demasiado y una
+larga se corta a media frase. Se nota, y se nota como error de edición.
+
+Como whisper ya entrega el tiempo de cada palabra, cada escena se alinea con el
+tramo de audio donde realmente se narra, y ese tramo se reparte entre sus
+planos. `min_seg_por_imagen` y `max_seg_por_imagen` acotan el resultado: una
+escena con mucha narración y un solo plano dejaría la imagen congelada.
+
+No se comparan textos para alinear —whisper transcribe lo que oye, y "cuarenta"
+puede volver como "40"— sino la proporción en palabras de cada escena.
+
+### Audio: narración, música y efectos
+
+En un video de imágenes fijas el audio no es decoración. Cuando la imagen cambia
+y no se oye nada, el corte se lee como un salto; con un barrido corto encima se
+lee como una decisión de edición. Es el mismo corte: cambia que el oído lo
+acompaña.
+
+```
+assets/musica/     tus pistas (no entra al repo)
+assets/efectos/    generados por .\generar-efectos.ps1
+```
+
+Los efectos **se sintetizan con ffmpeg** en vez de descargarse: no dependen de
+la licencia de nadie y se reproducen en cualquier máquina.
+
+```powershell
+.\generar-efectos.ps1     # whoosh, impacto, riser, clic
+```
+
+En el perfil:
+
+| Campo | Efecto |
+|---|---|
+| `musica` | ruta a la pista; se repite sola si es más corta que la narración |
+| `volumen_musica` | 0.12 va bien: debe oírse sin competir con la voz |
+| `efecto_transicion` | el `.wav` que suena en cada corte |
+| `volumen_efectos` | 0.30 es audible sin ser molesto |
+| `efectos_en` | `escena` (al cambiar de idea), `plano` (cada imagen) o `ninguno` |
+
+`escena` es el valor por defecto y casi siempre el correcto: dentro de una
+escena los planos siguen hablando de lo mismo, y marcarlos todos cansa.
+
+La mezcla suma con `normalize=0` para que la narración no pierda volumen cada
+vez que se añade una pista, y cierra con un limitador para no saturar.
+
+> **Licencias:** revisa lo que pones en `assets/musica/`. Una pista comercial
+> dispara Content ID en YouTube y TikTok aunque el video sea tuyo. Pixabay,
+> Free Music Archive y la biblioteca de audio de YouTube son seguras.
+
+### Coherencia entre planos
+
+Cada prompt se genera **por separado y sin memoria de los demás**. Lo que no se
+repita explícitamente no se mantiene. Por eso el guionista tiene instrucción de
+repetir la descripción física de personajes, lugares, época e iluminación con
+las mismas palabras exactas en cada prompt donde aparezcan, en vez de escribir
+"the same man": el generador no sabe a quién se refiere.
+
+`imagen.personaje` en el perfil sirve para lo mismo a nivel de canal.
+
 ## Por qué está diseñado así
 
 **El agente no sabe de temáticas.** Toda la personalidad vive en el perfil: el
