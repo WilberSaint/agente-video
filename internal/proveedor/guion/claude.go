@@ -21,12 +21,23 @@ type Claude struct {
 	modelo  string
 }
 
-// NuevoClaude construye el guionista. Si apiKey viene vacía el SDK resuelve
-// credenciales solo (ANTHROPIC_API_KEY, ANTHROPIC_AUTH_TOKEN o perfil de `ant auth login`).
-func NuevoClaude(apiKey, modelo string) *Claude {
+// NuevoClaude construye el guionista.
+//
+// Si apiKey viene vacía no se pasa ninguna opción y el SDK resuelve credenciales
+// solo: ANTHROPIC_AUTH_TOKEN, un perfil de `ant auth login` o federación de
+// identidades. Por eso el agente funciona con cualquiera de esos métodos sin
+// tocar código.
+//
+// workspaceID se manda como cabecera. Las llaves vinculadas a identidad la
+// exigen en cada petición, y el SDK no la deduce de ninguna variable de
+// entorno: sin ella la API responde 400.
+func NuevoClaude(apiKey, workspaceID, modelo string) *Claude {
 	var opts []option.RequestOption
 	if apiKey != "" {
 		opts = append(opts, option.WithAPIKey(apiKey))
+	}
+	if workspaceID != "" {
+		opts = append(opts, option.WithHeader("anthropic-workspace-id", workspaceID))
 	}
 	if modelo == "" {
 		modelo = modeloPorDefecto
@@ -101,7 +112,7 @@ func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*p
 		}
 	}
 	if err := stream.Err(); err != nil {
-		return nil, fmt.Errorf("API de Claude: %w", err)
+		return nil, explicar(err)
 	}
 	if mensaje.StopReason == anthropic.StopReasonRefusal {
 		return nil, fmt.Errorf("el modelo rechazó el tema (categoría %q): %s",
@@ -130,6 +141,38 @@ func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*p
 		g.Escenas[i].N = i + 1
 	}
 	return &g, nil
+}
+
+// explicar traduce los errores de la API que tienen una causa concreta y una
+// solución concreta. El mensaje crudo dice qué falta pero no dónde ponerlo, y
+// eso es la diferencia entre un minuto y media tarde.
+func explicar(err error) error {
+	msg := err.Error()
+	switch {
+	case strings.Contains(msg, "anthropic-workspace-id is required"):
+		return fmt.Errorf("tu llave está vinculada a identidad y exige indicar el "+
+			"workspace en cada petición.\n\n"+
+			"Define ANTHROPIC_WORKSPACE_ID con el id del workspace (empieza con "+
+			"\"wrkspc_\"). Lo encuentras en console.anthropic.com → Settings → "+
+			"Workspaces: al abrir el workspace, el id va en la URL.\n\n"+
+			"    [Environment]::SetEnvironmentVariable(\"ANTHROPIC_WORKSPACE_ID\",\"wrkspc_...\",\"User\")\n\n"+
+			"detalle original: %w", err)
+
+	case strings.Contains(msg, "401") || strings.Contains(msg, "authentication_error"):
+		return fmt.Errorf("la API rechazó las credenciales. Ejecuta "+
+			"\"agente-video doctor\" para ver cuál se está aplicando; si acabas de "+
+			"definir la variable, abre una terminal nueva.\n\ndetalle original: %w", err)
+
+	case strings.Contains(msg, "429"):
+		return fmt.Errorf("se alcanzó el límite de peticiones. Reintenta con "+
+			"\"-trabajo <id>\" para no repetir lo ya generado.\n\ndetalle original: %w", err)
+
+	case strings.Contains(msg, "credit balance") || strings.Contains(msg, "billing"):
+		return fmt.Errorf("la cuenta no tiene saldo o el workspace tiene el límite "+
+			"de gasto agotado. Revisa console.anthropic.com → Billing.\n\n"+
+			"detalle original: %w", err)
+	}
+	return fmt.Errorf("API de Claude: %w", err)
 }
 
 // extraerJSON tolera que el modelo envuelva la respuesta en ```json ... ```

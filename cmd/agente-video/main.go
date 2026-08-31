@@ -84,6 +84,8 @@ Variables de entorno:
                       (ANTHROPIC_FEDERATION_RULE_ID + ORGANIZATION_ID +
                       SERVICE_ACCOUNT_ID + IDENTITY_TOKEN_FILE). Hace falta una.
                       Usa "agente-video doctor" para ver cuál se está aplicando.
+  ANTHROPIC_WORKSPACE_ID  id del workspace (wrkspc_...). Obligatorio si tu llave
+                      está vinculada a identidad; la API responde 400 sin él.
   CF_ACCOUNT_ID       cuenta de Cloudflare  (si imagen.proveedor = cloudflare)
   CF_API_TOKEN        token de Cloudflare   (si imagen.proveedor = cloudflare)
   WHISPER_MODELO      ruta al .bin de whisper.cpp (por defecto bin/modelos/ggml-base.bin)
@@ -227,6 +229,14 @@ func cmdDoctor(ctx context.Context) error {
 	for _, aviso := range cred.Avisos {
 		fmt.Printf("  [AVISO] %s\n", aviso)
 	}
+	// No se puede saber de antemano si una llave está vinculada a identidad;
+	// solo la API lo dice, con un 400. Al menos mostramos si hay workspace.
+	if ws := os.Getenv("ANTHROPIC_WORKSPACE_ID"); ws != "" {
+		fmt.Printf("  [ok]    workspace %s\n", ws)
+	} else {
+		fmt.Println("  [--]    ANTHROPIC_WORKSPACE_ID sin definir " +
+			"(obligatorio solo si tu llave está vinculada a identidad)")
+	}
 
 	fmt.Println("\ncredenciales opcionales")
 	revisarVar("CF_ACCOUNT_ID", false)
@@ -285,7 +295,10 @@ func revisarVar(nombre string, obligatoria bool) {
 func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	var provs pipeline.Proveedores
 
-	provs.Guionista = guion.NuevoClaude(os.Getenv("ANTHROPIC_API_KEY"), "")
+	provs.Guionista = guion.NuevoClaude(
+		os.Getenv("ANTHROPIC_API_KEY"),
+		os.Getenv("ANTHROPIC_WORKSPACE_ID"),
+		"")
 
 	switch p.Imagen.Proveedor {
 	case "cloudflare":
