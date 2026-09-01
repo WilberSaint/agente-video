@@ -15,6 +15,7 @@ import (
 	"agente-video/internal/perfil"
 	"agente-video/internal/pipeline"
 	"agente-video/internal/proveedor/video"
+	"agente-video/internal/proveedor/voz"
 	"agente-video/internal/servidor"
 	"agente-video/internal/temas"
 	"agente-video/internal/trabajos"
@@ -128,5 +129,13 @@ func cmdServir(ctx context.Context, args []string) error {
 func conectarAvisos(provs pipeline.Proveedores, reg func(string, ...any)) {
 	if kb, ok := provs.Videasta.(*video.KenBurns); ok {
 		kb.Aviso = func(f string, a ...any) { reg("      aviso: "+f, a...) }
+	}
+	// El locutor de pago va envuelto en el respaldo, así que hay que entrar una
+	// capa: si no, un cambio de proveedor a mitad de lote no se vería en el panel.
+	if cr, ok := provs.Locutor.(*voz.ConRespaldo); ok {
+		cr.Aviso = func(f string, a ...any) { reg("      aviso: "+f, a...) }
+		if el, ok := cr.Principal.(*voz.ElevenLabs); ok {
+			el.Aviso = func(f string, a ...any) { reg("      aviso: "+f, a...) }
+		}
 	}
 }

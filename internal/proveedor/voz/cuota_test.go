@@ -71,3 +71,36 @@ func TestRespaldoNoEntraConUnFalloPasajero(t *testing.T) {
 		t.Error("no debía usarse el respaldo por un fallo pasajero")
 	}
 }
+
+func TestAcotarVelocidad(t *testing.T) {
+	casos := []struct {
+		dada   float64
+		quiere float64
+		avisa  bool
+	}{
+		{0, 1, false}, // sin configurar: velocidad natural
+		{1.1, 1.1, false},
+		{0.7, 0.7, false},
+		{1.2, 1.2, false},
+		{0.96, 0.96, false}, // el valor que ya traen los perfiles de Piper
+		{1.5, 1.2, true},    // por encima: la API daría 422
+		{0.3, 0.7, true},    // por debajo: igual
+	}
+	for _, c := range casos {
+		avisado := false
+		got := acotarVelocidad(c.dada, func(string, ...any) { avisado = true })
+		if got != c.quiere {
+			t.Errorf("acotarVelocidad(%v) = %v, se esperaba %v", c.dada, got, c.quiere)
+		}
+		if avisado != c.avisa {
+			t.Errorf("acotarVelocidad(%v): avisó=%v, se esperaba %v", c.dada, avisado, c.avisa)
+		}
+	}
+}
+
+// Sin Aviso conectado no debe reventar: el aviso es opcional.
+func TestAcotarVelocidadSinAviso(t *testing.T) {
+	if got := acotarVelocidad(9, nil); got != velocidadMax {
+		t.Errorf("= %v, se esperaba %v", got, velocidadMax)
+	}
+}

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -27,6 +28,9 @@ import (
 // La contrapartida es que se paga por carácter y hay cuota. Un video de 45
 // segundos son unos 600 caracteres.
 type ElevenLabs struct {
+	// Aviso comunica ajustes que se han tenido que corregir. Si es nil, callan.
+	Aviso func(string, ...any)
+
 	apiKey string
 	vozID  string
 	modelo string
@@ -61,6 +65,31 @@ type ajustesEL struct {
 	Estabilidad float64 `json:"stability"`
 	Similitud   float64 `json:"similarity_boost"`
 	Estilo      float64 `json:"style"`
+	// Velocidad la aplica ElevenLabs al generar, no estirando el audio
+	// después: la voz suena más rápida, no acelerada.
+	Velocidad float64 `json:"speed,omitempty"`
+}
+
+// La API rechaza con 422 cualquier velocidad fuera de este rango, y un perfil
+// con un número copiado de Piper —donde la escala es otra— tumbaría el video
+// entero por un detalle de configuración.
+const (
+	velocidadMin = 0.7
+	velocidadMax = 1.2
+)
+
+func acotarVelocidad(v float64, avisar func(string, ...any)) float64 {
+	if v <= 0 {
+		return 1
+	}
+	if ajustada := math.Min(math.Max(v, velocidadMin), velocidadMax); ajustada != v {
+		if avisar != nil {
+			avisar("velocidad %.2f fuera del rango de ElevenLabs (%.1f–%.1f); se usa %.2f",
+				v, velocidadMin, velocidadMax, ajustada)
+		}
+		return ajustada
+	}
+	return v
 }
 
 func (e *ElevenLabs) Sintetizar(ctx context.Context, req proveedor.PeticionVoz) error {
@@ -79,9 +108,14 @@ func (e *ElevenLabs) Sintetizar(ctx context.Context, req proveedor.PeticionVoz) 
 		Texto:  req.Texto,
 		Modelo: e.modelo,
 		Ajustes: ajustesEL{
+			// Estos tres están afinados para narración y no se exponen en el
+			// perfil: expresividad y variacion son escalas de Piper y
+			// significan otra cosa aquí. La velocidad sí, porque es lo que se
+			// ajusta oyendo.
 			Estabilidad: 0.45,
 			Similitud:   0.80,
 			Estilo:      0.15,
+			Velocidad:   acotarVelocidad(req.Voz.Velocidad, e.Aviso),
 		},
 	})
 	if err != nil {

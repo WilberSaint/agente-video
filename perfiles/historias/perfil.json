@@ -2,16 +2,17 @@
   "id": "historias",
   "nombre": "Cuervo — historias y relatos",
   "idioma": "es",
-
-  "formato": { "ancho": 1080, "alto": 1920, "fps": 30 },
-
+  "formato": {
+    "ancho": 1080,
+    "alto": 1920,
+    "fps": 30
+  },
   "guion": {
     "tono": "narrador de relatos, íntimo y en segunda persona, como quien cuenta algo que le contaron a él; frases cortas, pausas cargadas",
     "duracion_seg": 50,
     "escenas": 7,
     "instrucciones_extra": "Nunca reveles el desenlace antes de la última escena. Cierra con una pregunta que invite a comentar."
   },
-
   "imagen": {
     "proveedor": "pollinations",
     "modelo": "flux",
@@ -21,20 +22,18 @@
     "referencia": "",
     "personaje": ""
   },
-
   "voz": {
-    "proveedor": "piper",
-    "modelo": "../../bin/voces/es_MX-claude-high.onnx",
-    "velocidad": 0.96,
+    "proveedor": "elevenlabs",
+    "modelo": "N2lVS1w4EtoT3dr4eOWO",
+    "velocidad": 1,
     "expresividad": 0.95,
     "variacion": 0.72,
     "procesar": true,
     "presencia": 3.5,
-    "limite_caracteres": 0,
-    "respaldo": "",
-    "modelo_respaldo": ""
+    "limite_caracteres": 10000,
+    "respaldo": "piper",
+    "modelo_respaldo": "../../bin/voces/es_MX-claude-high.onnx"
   },
-
   "subtitulos": {
     "activos": true,
     "fuente": "Arial",
@@ -48,7 +47,6 @@
     "color_activo": "&H0000E5FF&",
     "escala_pop": 112
   },
-
   "personaje": {
     "imagen": "personaje/",
     "posicion": "abajo-izquierda",
@@ -59,7 +57,6 @@
     "forma": "circulo",
     "color_croma": ""
   },
-
   "video": {
     "proveedor": "kenburns",
     "transicion": "fade",
@@ -68,7 +65,7 @@
     "musica": "../../assets/musica/musica-de-suspenso-260192.mp3",
     "volumen_musica": 0.11,
     "min_seg_por_imagen": 1.8,
-    "max_seg_por_imagen": 5.0,
+    "max_seg_por_imagen": 5,
     "efecto_transicion": "../../assets/efectos/whoosh.wav",
     "volumen_efectos": 0.28,
     "efectos_en": "escena"
