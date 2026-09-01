@@ -263,3 +263,29 @@ func TestFraccionPonderaLasEtapas(t *testing.T) {
 		t.Errorf("acabar el montaje debería ser ~1, fue %.2f", f)
 	}
 }
+
+// Encolar varios temas de golpe es la función principal del panel, y los
+// identificadores se generaban desde el reloj. En Windows su resolución es de
+// medio milisegundo: al encolar en bucle todos recibían el mismo instante y el
+// mismo id, con lo que el mapa se quedaba con uno y cancelar un trabajo
+// afectaba a otro. Medido antes del arreglo: 2 ids distintos de 8.
+func TestLosIdentificadoresNoColisionan(t *testing.T) {
+	c := NuevaCola("", nil) // sin obrero: solo interesa el alta
+
+	const cuantos = 200
+	vistos := make(map[string]string, cuantos)
+	for i := 0; i < cuantos; i++ {
+		tr, err := c.Encolar("demo", fmt.Sprintf("tema %d", i))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if previo, repetido := vistos[tr.ID]; repetido {
+			t.Fatalf("id repetido %q entre %q y %q", tr.ID, previo, tr.Tema)
+		}
+		vistos[tr.ID] = tr.Tema
+	}
+	if len(c.Listar()) != cuantos {
+		t.Errorf("la cola tiene %d trabajos, esperaba %d: se perdieron por id repetido",
+			len(c.Listar()), cuantos)
+	}
+}

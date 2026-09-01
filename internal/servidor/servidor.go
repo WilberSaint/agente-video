@@ -34,6 +34,9 @@ func (s *Servidor) Rutas() http.Handler {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /api/perfiles", s.perfiles)
+	mux.HandleFunc("GET /api/perfiles/{id}", s.verPerfil)
+	mux.HandleFunc("PUT /api/perfiles/{id}", s.guardarPerfil)
+	mux.HandleFunc("GET /api/recursos", s.recursos)
 	mux.HandleFunc("GET /api/trabajos", s.listar)
 	mux.HandleFunc("POST /api/trabajos", s.encolar)
 	mux.HandleFunc("DELETE /api/trabajos/{id}", s.olvidar)

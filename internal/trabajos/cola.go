@@ -8,12 +8,14 @@ package trabajos
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"agente-video/internal/pipeline"
@@ -247,7 +249,7 @@ func (c *Cola) Encolar(perfil, tema string) (*Trabajo, error) {
 		return nil, fmt.Errorf("hace falta un perfil")
 	}
 	t := &Trabajo{
-		ID:     fmt.Sprintf("%d-%s", time.Now().UnixNano(), aleatorio()),
+		ID:     fmt.Sprintf("%d-%d-%s", time.Now().UnixNano(), secuencia.Add(1), aleatorio()),
 		Perfil: perfil,
 		Tema:   tema,
 		Estado: EnCola,
@@ -450,16 +452,30 @@ func (t *Trabajo) copia() *Trabajo {
 	return &c
 }
 
+// aleatorio devuelve un sufijo realmente aleatorio.
+//
+// La primera versión lo derivaba de time.Now().UnixNano(), igual que el prefijo
+// del identificador. En Windows el reloj tiene una resolución de medio
+// milisegundo, así que al encolar varios temas seguidos —que es justo lo que
+// hace el panel al pegar una lista— todos recibían el mismo nanosegundo y, por
+// tanto, el mismo identificador: medido, 2 ids distintos de 8. El mapa por id
+// se quedaba con uno solo y cancelar un trabajo afectaba a otro.
 func aleatorio() string {
 	const letras = "abcdefghijkmnpqrstuvwxyz23456789"
-	b := make([]byte, 5)
-	n := time.Now().UnixNano()
+	b := make([]byte, 6)
+	if _, err := rand.Read(b); err != nil {
+		// Sin entropía disponible, el contador basta para no colisionar dentro
+		// del proceso, que es donde importa.
+		return fmt.Sprintf("%06d", secuencia.Add(1))
+	}
 	for i := range b {
-		b[i] = letras[n%int64(len(letras))]
-		n /= int64(len(letras))
+		b[i] = letras[int(b[i])%len(letras)]
 	}
 	return string(b)
 }
+
+// secuencia garantiza unicidad aunque el reloj y el azar fallen a la vez.
+var secuencia atomic.Uint64
 
 // sanear convierte un tema en un nombre de carpeta legible. Se duplica aquí en
 // vez de exportarla desde pipeline para no ampliar su superficie pública por un

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Trabajo from './Trabajo.vue'
+import Editor from './Editor.vue'
 
 const perfiles = ref([])
 const trabajos = ref([])
@@ -103,6 +104,7 @@ async function reintentar(t) {
 }
 
 const perfilActual = computed(() => perfiles.value.find((p) => p.id === perfil.value))
+const editando = ref('')
 
 onMounted(() => {
   cargarPerfiles()
@@ -128,6 +130,7 @@ onUnmounted(() => fuente && fuente.close())
             <option v-for="p in perfiles" :key="p.id" :value="p.id">{{ p.nombre }}</option>
           </select>
         </label>
+        <button class="editar" :disabled="!perfil" @click="editando = perfil">Editar perfil</button>
         <p v-if="perfilActual" class="silencio pequeno resumen-perfil">
           {{ perfilActual.formato }} · {{ perfilActual.escenas }} escenas · ~{{ perfilActual.segundos }}s
         </p>
@@ -187,6 +190,9 @@ onUnmounted(() => fuente && fuente.close())
       <Trabajo v-for="t in cerrados" :key="t.id" :t="t"
                @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
     </template>
+  <Editor v-if="editando" :perfil-id="editando"
+            @cerrar="editando = ''" @guardado="cargarPerfiles" />
+
   </div>
 </template>
 
@@ -206,6 +212,7 @@ h1 { font-size: 21px; margin: 0; letter-spacing: -0.02em; }
 .fila-perfil { display: flex; align-items: end; gap: 14px; flex-wrap: wrap; }
 .fila-perfil label { flex: 1; min-width: 220px; }
 .resumen-perfil { margin: 0 0 10px; }
+.editar { margin-bottom: 10px; white-space: nowrap; }
 
 label { display: block; }
 .etiqueta { display: block; font-size: 13px; color: var(--suave); margin-bottom: 6px; }
