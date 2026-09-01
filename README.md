@@ -586,3 +586,43 @@ Sintetiza a unas dos veces el tiempo real frente a las diez de Piper —medido,
 no cambian nada.
 
 Compara todas en `muestras-voz/comparar.html`.
+
+---
+
+## Producción automática
+
+Es lo que separa una herramienta de un agente: sin esto, alguien tiene que estar
+delante escribiendo el tema. La pestaña **Producción automática** del panel tiene
+las dos piezas.
+
+### Banco de temas
+
+Pegas ideas —una por línea— y quedan guardadas por perfil. Los repetidos se
+detectan comparando el texto normalizado, porque pegar dos veces la misma lista
+es de lo más normal y duplicarlos produciría dos videos idénticos.
+
+Cada tema pasa por **pendiente → usado**, y se puede descartar o reutilizar. El
+panel muestra cuántos días de producción quedan: *"12 pendientes · da para 4
+días a 3/día"* dice mucho más que un número suelto.
+
+### Horario
+
+Una regla es *"a las 03:00, 3 videos del perfil historias"*, opcionalmente
+limitada a ciertos días. A esa hora el agente toma los temas del banco y los
+encola.
+
+| Detalle | Por qué |
+|---|---|
+| Se comprueba cada minuto | Sobrevive a reinicios, hibernación y cambios de hora; un cálculo hecho una vez se queda desfasado |
+| Ventana de gracia de 1 hora | Si el servidor estaba caído a la hora exacta, aún se recupera. Pasado eso se deja pasar el día: producir a destiempo es peor que no producir |
+| Una vez al día, por fecha | Comparar fechas y no intervalos evita disparar dos veces si el reloj salta |
+| Los temas se marcan al tomarlos | Consultar primero y marcar después haría que dos disparos simultáneos tomaran los mismos |
+| Si el trabajo no se encola, el tema vuelve a pendiente | La idea sigue siendo buena; lo que falló fue la máquina |
+
+### Proponer temas
+
+Con `proponer_si_faltan` activo, cuando el banco no da para la tanda el agente
+pide ideas nuevas antes de rendirse. Se le pasan los temas ya publicados para
+que no repita.
+
+Sin esto, un banco vacío a las tres de la mañana es una noche perdida.

@@ -16,7 +16,9 @@ import (
 	"strings"
 	"time"
 
+	"agente-video/internal/horario"
 	"agente-video/internal/perfil"
+	"agente-video/internal/temas"
 	"agente-video/internal/trabajos"
 )
 
@@ -24,10 +26,14 @@ type Servidor struct {
 	cola        *trabajos.Cola
 	dirPerfiles string
 	interfaz    fs.FS // puede ser nil si se compiló sin panel
+	banco       *temas.Banco
+	horario     *horario.Horario
 }
 
-func Nuevo(cola *trabajos.Cola, dirPerfiles string, interfaz fs.FS) *Servidor {
-	return &Servidor{cola: cola, dirPerfiles: dirPerfiles, interfaz: interfaz}
+func Nuevo(cola *trabajos.Cola, dirPerfiles string, interfaz fs.FS,
+	banco *temas.Banco, h *horario.Horario) *Servidor {
+	return &Servidor{cola: cola, dirPerfiles: dirPerfiles, interfaz: interfaz,
+		banco: banco, horario: h}
 }
 
 func (s *Servidor) Rutas() http.Handler {
@@ -41,6 +47,13 @@ func (s *Servidor) Rutas() http.Handler {
 	mux.HandleFunc("POST /api/trabajos", s.encolar)
 	mux.HandleFunc("DELETE /api/trabajos/{id}", s.olvidar)
 	mux.HandleFunc("POST /api/trabajos/{id}/cancelar", s.cancelar)
+	mux.HandleFunc("GET /api/temas", s.listarTemas)
+	mux.HandleFunc("POST /api/temas", s.agregarTemas)
+	mux.HandleFunc("PATCH /api/temas/{id}", s.cambiarTema)
+	mux.HandleFunc("DELETE /api/temas/{id}", s.olvidarTema)
+	mux.HandleFunc("GET /api/horario", s.listarReglas)
+	mux.HandleFunc("POST /api/horario", s.guardarRegla)
+	mux.HandleFunc("DELETE /api/horario/{id}", s.olvidarRegla)
 	mux.HandleFunc("GET /api/eventos", s.eventos)
 	mux.HandleFunc("GET /media/{id}/video", s.video)
 	mux.HandleFunc("GET /media/{id}/textos", s.textos)

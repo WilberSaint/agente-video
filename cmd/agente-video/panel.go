@@ -11,10 +11,12 @@ import (
 
 	"agente-video/interfaz"
 	"agente-video/internal/herramientas"
+	"agente-video/internal/horario"
 	"agente-video/internal/perfil"
 	"agente-video/internal/pipeline"
 	"agente-video/internal/proveedor/video"
 	"agente-video/internal/servidor"
+	"agente-video/internal/temas"
 	"agente-video/internal/trabajos"
 )
 
@@ -73,8 +75,14 @@ func cmdServir(ctx context.Context, args []string) error {
 	cola := trabajos.NuevaCola(filepath.Join(*dirTrabajos, "cola.json"), ejecutor)
 	cola.Arrancar(ctx)
 
+	// Banco de temas y horario: lo que permite producir sin nadie delante.
+	banco := temas.Nuevo(filepath.Join(*dirTrabajos, "temas.json"))
+	h := horario.Nuevo(filepath.Join(*dirTrabajos, "horario.json"),
+		disparador(banco, cola, *dirPerfiles))
+	h.Arrancar(ctx)
+
 	panel := interfaz.FS()
-	srv := servidor.Nuevo(cola, *dirPerfiles, panel)
+	srv := servidor.Nuevo(cola, *dirPerfiles, panel, banco, h)
 
 	dir := fmt.Sprintf("%s:%d", *direccion, *puerto)
 	http := &http.Server{
@@ -102,6 +110,7 @@ func cmdServir(ctx context.Context, args []string) error {
 		defer cancelar()
 		_ = http.Shutdown(cierre)
 		cola.Esperar(20 * time.Second)
+		h.Esperar(5 * time.Second)
 	}()
 
 	if err := http.ListenAndServe(); err != nil && err.Error() != "http: Server closed" {

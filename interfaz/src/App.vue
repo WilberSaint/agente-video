@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import Trabajo from './Trabajo.vue'
 import Editor from './Editor.vue'
+import Produccion from './Produccion.vue'
 
 const perfiles = ref([])
 const trabajos = ref([])
@@ -105,6 +106,7 @@ async function reintentar(t) {
 
 const perfilActual = computed(() => perfiles.value.find((p) => p.id === perfil.value))
 const editando = ref('')
+const pestana = ref('generar')
 
 onMounted(() => {
   cargarPerfiles()
@@ -121,6 +123,26 @@ onUnmounted(() => fuente && fuente.close())
         {{ conectado ? 'en vivo' : 'reconectando…' }}
       </span>
     </header>
+
+    <nav class="pestanas">
+
+
+      <button :class="{ activa: pestana === 'generar' }" @click="pestana = 'generar'">Generar</button>
+
+
+      <button :class="{ activa: pestana === 'produccion' }" @click="pestana = 'produccion'">Producción automática</button>
+
+
+    </nav>
+
+
+
+    <Produccion v-if="pestana === 'produccion'" :perfiles="perfiles" />
+
+
+
+    <template v-else>
+
 
     <section class="tarjeta lanzador">
       <div class="fila-perfil">
@@ -190,6 +212,9 @@ onUnmounted(() => fuente && fuente.close())
       <Trabajo v-for="t in cerrados" :key="t.id" :t="t"
                @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
     </template>
+
+
+    </template>
   <Editor v-if="editando" :perfil-id="editando"
             @cerrar="editando = ''" @guardado="cargarPerfiles" />
 
@@ -225,6 +250,10 @@ h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.07em;
 h2 .normal { text-transform: none; letter-spacing: 0; font-weight: 400; }
 
 .vacio-seccion { text-align: center; padding: 22px 18px; }
+
+.pestanas { display: flex; gap: 6px; margin-bottom: 16px; }
+.pestanas button { border-radius: 999px; padding: 7px 15px; font-size: 14px; }
+.pestanas button.activa { background: var(--acento); border-color: var(--acento); color: #fff; font-weight: 600; }
 
 /* En móvil la acción principal ocupa el ancho: es el objetivo de la pantalla
    y el pulgar no debería tener que buscarla. */
