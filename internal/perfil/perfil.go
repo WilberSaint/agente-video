@@ -25,13 +25,21 @@ type Guion struct {
 }
 
 type Imagen struct {
-	Proveedor  string `json:"proveedor"` // pollinations | cloudflare
+	Proveedor  string `json:"proveedor"` // pollinations | cloudflare | local
 	Modelo     string `json:"modelo"`
 	Estilo     string `json:"estilo"` // se añade a TODOS los prompts
 	Negativo   string `json:"negativo"`
 	Semilla    int64  `json:"semilla"`    // fija = mayor consistencia entre escenas
 	Referencia string `json:"referencia"` // ruta relativa dentro del perfil
 	Personaje  string `json:"personaje"`  // descripción física repetida en cada prompt
+
+	// Solo para proveedor "local": la GPU propia. Van en el perfil y no en
+	// variables de entorno porque son decisiones de estilo —cuánto insistir en
+	// el prompt, cuántos pasos— y cada canal puede querer las suyas.
+	Servidor string  `json:"servidor,omitempty"` // http://127.0.0.1:7860
+	Pasos    int     `json:"pasos,omitempty"`
+	CFG      float64 `json:"cfg,omitempty"`
+	Sampler  string  `json:"sampler,omitempty"`
 }
 
 type Voz struct {

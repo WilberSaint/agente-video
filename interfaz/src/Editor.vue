@@ -126,9 +126,14 @@ const avisos = computed(() => {
           <label>
             <span>Proveedor</span>
             <select v-model="p.imagen.proveedor">
-              <option value="cloudflare">Cloudflare — rápido, sin semilla fija</option>
-              <option value="pollinations">Pollinations — lento, mantiene personajes</option>
+              <option value="cloudflare">Cloudflare — rápido, cuadrado, sin semilla fija</option>
+              <option value="pollinations">Pollinations — lento, 576×1024, mantiene personajes</option>
+              <option value="local">GPU propia — resolución real, sin límites</option>
             </select>
+          </label>
+          <label v-if="p.imagen.proveedor === 'local'">
+            <span>Servidor de la GPU</span>
+            <input v-model="p.imagen.servidor" placeholder="http://127.0.0.1:7860" />
           </label>
           <label>
             <span>Estilo <em>— se añade a todos los prompts</em></span>
