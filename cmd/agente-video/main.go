@@ -80,6 +80,8 @@ Opciones de "generar":
   -bin       string  carpeta de binarios externos  (por defecto "bin")
   -reintentos int    reintentos por imagen         (por defecto 3)
   -animacion string  ninguna | pop | karaoke | palabra  (sobrescribe el perfil)
+  -simular           guion fijo, sin llamar a la API. Para probar sin gastar créditos
+  -guion     string  usa el guion de este .json en lugar de generarlo
 
 Variables de entorno:
   ANTHROPIC_API_KEY   llave para el guionista. Alternativas: ANTHROPIC_AUTH_TOKEN,
@@ -87,6 +89,7 @@ Variables de entorno:
                       (ANTHROPIC_FEDERATION_RULE_ID + ORGANIZATION_ID +
                       SERVICE_ACCOUNT_ID + IDENTITY_TOKEN_FILE). Hace falta una.
                       Usa "agente-video doctor" para ver cuál se está aplicando.
+  ELEVENLABS_API_KEY  llave de ElevenLabs (si voz.proveedor = elevenlabs)
   ANTHROPIC_WORKSPACE_ID  id del workspace (wrkspc_...). Obligatorio si tu llave
                       está vinculada a identidad; la API responde 400 sin él.
   CF_ACCOUNT_ID       cuenta de Cloudflare  (si imagen.proveedor = cloudflare)
@@ -106,6 +109,8 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	dirBin := fs.String("bin", "bin", "carpeta de binarios")
 	reintentos := fs.Int("reintentos", 3, "reintentos por imagen")
 	animacion := fs.String("animacion", "", "sobrescribe subtitulos.animacion del perfil")
+	simular := fs.Bool("simular", false, "usa un guion fijo, sin llamar a la API ni gastar créditos")
+	guionArchivo := fs.String("guion", "", "usa el guion de este archivo .json en vez de generarlo")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -132,6 +137,13 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	provs, err := construirProveedores(p)
 	if err != nil {
 		return err
+	}
+	// El guionista es la única etapa que cuesta dinero: imágenes, voz,
+	// subtítulos y montaje son gratis. Sustituirlo permite iterar sobre el
+	// personaje, los subtítulos o la mezcla sin gastar créditos en un guion
+	// que se va a tirar a los diez segundos.
+	if *simular || *guionArchivo != "" {
+		provs.Guionista = guion.NuevoSimulado(*guionArchivo)
 	}
 
 	fmt.Printf("perfil : %s (%s)\n", p.Nombre, p.ID)
@@ -316,6 +328,11 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	switch p.Voz.Proveedor {
 	case "piper", "":
 		provs.Locutor = voz.NuevoPiper()
+	case "elevenlabs":
+		// El id de la voz va en voz.modelo, igual que la ruta del .onnx en
+		// Piper: para el perfil es "qué voz", y cada proveedor lo interpreta.
+		provs.Locutor = voz.NuevoElevenLabs(
+			os.Getenv("ELEVENLABS_API_KEY"), p.Voz.Modelo, "")
 	default:
 		return provs, fmt.Errorf("proveedor de voz desconocido: %q", p.Voz.Proveedor)
 	}

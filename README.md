@@ -505,3 +505,60 @@ Si tienes un PNG con transparencia de verdad, usa `"forma": "recorte"`.
 **Los subtítulos se suben solos** para no quedar bajo el personaje. Sin eso el
 círculo los corta, y es un fallo que no da ningún error: solo se ve mirando el
 video terminado.
+
+---
+
+## Probar sin gastar créditos
+
+**El guionista es la única etapa que cuesta dinero.** Imágenes, voz, subtítulos
+y montaje son gratis. Al ajustar el personaje, los subtítulos, la música o el
+ritmo hacen falta muchas pasadas, y pagar un guion nuevo cada vez para tirarlo a
+los diez segundos no tiene sentido.
+
+```powershell
+.\agente-video.exe generar -perfil demo -tema "prueba" -simular
+```
+
+Usa un guion fijo pensado para que las pruebas sean representativas: escenas de
+duración desigual, un sujeto recurrente, encuadres variados y una pausa larga
+—eso último ejercita el corte de línea de los subtítulos y los tramos de
+silencio del personaje, que es donde suelen aparecer los fallos. Se ajusta al
+número de escenas del perfil.
+
+Para reproducir un caso concreto que falló, se le puede pasar un guion guardado:
+
+```powershell
+.\agente-video.exe generar -perfil demo -tema "x" -guion trabajo\demo\<id>\01-guion.json
+```
+
+Y para iterar solo sobre el montaje, borrar `05-final.mp4` de un trabajo ya
+hecho y relanzarlo con `-trabajo <id>` re-renderiza en ~30 segundos
+reutilizando guion, imágenes y voz.
+
+## Voz por API: ElevenLabs
+
+```json
+"voz": {
+  "proveedor": "elevenlabs",
+  "modelo": "<Voice ID copiado de la web, en Voices>",
+  "procesar": true
+}
+```
+
+Con `ELEVENLABS_API_KEY` en el entorno.
+
+**Por qué la API y no audios pregrabados en una carpeta:** la narración se
+escribe nueva en cada video. Un banco de audios solo serviría si el texto se
+repitiera, y entonces no habría agente.
+
+Un video de 45 s son unos 600 caracteres. El plan gratuito da 10.000 al mes
+(~16 videos) **sin derechos de uso comercial**; el de 5 USD da 30.000 (~50).
+
+| Proveedor | Calidad | Corre en | Costo |
+|---|---|---|---|
+| `piper` | Aceptable, algo sintética | Tu CPU | Gratis, ilimitado |
+| `elevenlabs` | La mejor | Su nube | Por carácter |
+
+El salto grande de calidad está en el modelo, no en el hardware: **Kokoro** corre
+también en CPU y suena bastante mejor que Piper. Pide Python instalado, que es la
+razón por la que no se incluyó de entrada.
