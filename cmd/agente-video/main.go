@@ -96,6 +96,7 @@ Opciones de "generar":
   -simular           guion fijo, sin llamar a la API. Para probar sin gastar créditos
   -guion     string  usa el guion de este .json en lugar de generarlo
   -voz-archivo string  usa este audio ya narrado (mp3/wav) en vez de sintetizar
+  -sin-personaje       genera este video sin el personaje del perfil
 
 Variables de entorno:
   ANTHROPIC_API_KEY   llave para el guionista. Alternativas: ANTHROPIC_AUTH_TOKEN,
@@ -127,6 +128,7 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	simular := fs.Bool("simular", false, "usa un guion fijo, sin llamar a la API ni gastar créditos")
 	guionArchivo := fs.String("guion", "", "usa el guion de este archivo .json en vez de generarlo")
 	vozArchivo := fs.String("voz-archivo", "", "usa este audio ya narrado en vez de sintetizar")
+	sinPersonaje := fs.Bool("sin-personaje", false, "quita el personaje en este video")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -148,6 +150,13 @@ func cmdGenerar(ctx context.Context, args []string) error {
 		if err := p.Validar(); err != nil {
 			return err
 		}
+	}
+
+	// No todos los videos de un canal quieren la mascota encima: en uno serio
+	// estorba. Es una decisión por video, no por canal, así que va aquí y no en
+	// una copia del perfil.
+	if *sinPersonaje {
+		p.Personaje.Imagen = ""
 	}
 
 	// Override para comparar voces sin duplicar perfiles. Comparar es el caso
