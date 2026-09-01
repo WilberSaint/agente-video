@@ -289,3 +289,26 @@ func TestLosIdentificadoresNoColisionan(t *testing.T) {
 			len(c.Listar()), cuantos)
 	}
 }
+
+func TestAtascoCuentaSoloLoQueSigueVivo(t *testing.T) {
+	c := NuevaCola(filepath.Join(t.TempDir(), "cola.json"), nil)
+	if n := c.Atasco(); n != 0 {
+		t.Fatalf("cola vacía: Atasco() = %d", n)
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := c.Encolar("p", fmt.Sprintf("tema %d", i)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if n := c.Atasco(); n != 3 {
+		t.Fatalf("Atasco() = %d, se esperaban 3", n)
+	}
+	// Un trabajo cerrado ya no atasca a nadie, aunque siga en la lista.
+	c.mu.Lock()
+	c.trabajos[0].Estado = Terminado
+	c.trabajos[1].Estado = Fallido
+	c.mu.Unlock()
+	if n := c.Atasco(); n != 1 {
+		t.Errorf("Atasco() = %d tras cerrar dos, se esperaba 1", n)
+	}
+}

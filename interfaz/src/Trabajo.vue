@@ -64,6 +64,15 @@ const restante = computed(() => {
   const falta = Math.max(0, Math.round(total - transcurrido.value))
   return `~${comoTiempo(falta)} restantes`
 })
+
+// Un video puede pasar minutos sin decir nada —una imagen tarda 45 segundos y
+// el ensamblado no imprime nada mientras trabaja—, pero pasado un rato el
+// silencio deja de ser normal y hay que poder verlo sin leer el registro.
+const silencio = computed(() => {
+  if (!activo.value || !props.t.novedad) return 0
+  return Math.round((ahora.value - new Date(props.t.novedad)) / 1000)
+})
+const parado = computed(() => silencio.value >= 180)
 </script>
 
 <template>
@@ -100,6 +109,10 @@ const restante = computed(() => {
       <p class="pequeno silencio tiempos">
         <span>{{ comoTiempo(transcurrido) }} en curso</span>
         <span v-if="restante">· {{ restante }}</span>
+      </p>
+      <p v-if="parado" class="pequeno quieto">
+        sin novedades desde hace {{ comoTiempo(silencio) }} — suele ser la máquina
+        ocupada; a los 45 minutos se corta solo y la cola sigue
       </p>
     </div>
 
@@ -169,6 +182,9 @@ h3 { margin: 6px 0 0; font-size: 16px; font-weight: 600; line-height: 1.35; }
 .linea-avance { display: flex; gap: 6px; margin: 7px 0 0; }
 .por-ciento { margin-left: auto; font-variant-numeric: tabular-nums; }
 .tiempos { display: flex; gap: 6px; margin: 4px 0 0; font-variant-numeric: tabular-nums; }
+/* Aviso, no error: casi siempre acaba avanzando, así que no debe alarmar más
+   de la cuenta ni parecer que el trabajo ya falló. */
+.quieto { margin: 6px 0 0; color: var(--aviso, #b8860b); }
 
 .fallo {
   margin: 12px 0 0; padding: 10px 12px; white-space: pre-wrap;

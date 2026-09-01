@@ -8,6 +8,7 @@ package pipeline
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -70,6 +71,13 @@ type Opciones struct {
 	Registro   func(formato string, args ...any)
 	// Avance es opcional; solo lo usa el servidor.
 	Avance func(Avance)
+
+	// PlazoMaximo corta el video entero si tarda más de la cuenta. Existe
+	// porque la cola tiene un solo trabajador: un trabajo detenido no se queda
+	// quieto él solo, bloquea todos los que vengan detrás, y de madrugada eso
+	// son noches enteras sin producir y sin que nadie se entere. Vale más un
+	// video fallido que una cola parada.
+	PlazoMaximo time.Duration
 }
 
 type Pipeline struct {
@@ -84,6 +92,9 @@ func Nuevo(prov Proveedores, opt Opciones) *Pipeline {
 	if opt.Registro == nil {
 		opt.Registro = func(f string, a ...any) { fmt.Printf(f+"\n", a...) }
 	}
+	if opt.PlazoMaximo == 0 {
+		opt.PlazoMaximo = plazoPorDefecto
+	}
 	return &Pipeline{prov: prov, opt: opt}
 }
 
@@ -94,10 +105,29 @@ type Resultado struct {
 	Duracion   time.Duration
 }
 
+// plazoPorDefecto es holgado a propósito: un video normal tarda entre dos y
+// quince minutos según el proveedor de imágenes, así que cuarenta y cinco
+// minutos no cortan nada sano, solo lo que está claramente detenido.
+const plazoPorDefecto = 45 * time.Minute
+
 // Ejecutar corre las cinco etapas. idTrabajo permite reanudar un trabajo previo;
 // si viene vacío se crea uno nuevo.
-func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrabajo string) (*Resultado, error) {
+func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrabajo string) (res *Resultado, err error) {
 	inicio := time.Now()
+
+	// El plazo cuelga del contexto, así que lo heredan todas las etapas: la
+	// llamada a Claude, las peticiones de imágenes y los procesos externos
+	// (ffmpeg, whisper, piper) que se lanzan con exec.CommandContext.
+	ctx, cancelarPlazo := context.WithTimeout(ctx, pl.opt.PlazoMaximo)
+	defer cancelarPlazo()
+
+	// Sin esto el fallo llega como "context deadline exceeded" colgando de la
+	// etapa que tocara, y no se distingue de un error del proveedor.
+	defer func() {
+		if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+			err = fmt.Errorf("se agotó el plazo de %s: %w", pl.opt.PlazoMaximo, err)
+		}
+	}()
 
 	if idTrabajo == "" {
 		idTrabajo = fmt.Sprintf("%s-%s", time.Now().Format("20060102-150405"), sanear(tema, 40))
@@ -153,6 +183,11 @@ func (pl *Pipeline) Ejecutar(ctx context.Context, p *perfil.Perfil, tema, idTrab
 		final = rutaVideo
 	}
 	pl.escribirMetadatos(final, guion)
+
+	// La última etapa no imprime nada mientras trabaja, así que sin esta línea
+	// el registro se queda parado en mitad del ensamblado y no hay forma de
+	// distinguir un video terminado de uno atascado.
+	pl.opt.Registro("listo en %s: %s", time.Since(inicio).Round(time.Second), final)
 
 	return &Resultado{
 		Guion:      guion,

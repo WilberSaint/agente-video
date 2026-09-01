@@ -37,9 +37,12 @@ type Trabajo struct {
 	Tema   string `json:"tema"`
 	Estado Estado `json:"estado"`
 
-	Etapa    string  `json:"etapa"`
-	Detalle  string  `json:"detalle"`
-	Progreso float64 `json:"progreso"` // 0..1
+	Etapa   string `json:"etapa"`
+	Detalle string `json:"detalle"`
+	// Novedad es cuándo se supo algo por última vez de este trabajo. Sin
+	// ella, un trabajo parado y uno avanzando se ven exactamente igual.
+	Novedad  *time.Time `json:"novedad,omitempty"`
+	Progreso float64    `json:"progreso"` // 0..1
 
 	Creado time.Time  `json:"creado"`
 	Inicio *time.Time `json:"inicio,omitempty"`
@@ -188,6 +191,7 @@ func (c *Cola) correr(padre context.Context, t *Trabajo) {
 		t.Etapa = a.Etiqueta
 		t.Detalle = a.Detalle
 		t.Progreso = a.Fraccion()
+		tocar(t)
 		c.mu.Unlock()
 		c.emitir(Evento{Tipo: "estado", Trabajo: c.Uno(t.ID)})
 	}
@@ -198,6 +202,7 @@ func (c *Cola) correr(padre context.Context, t *Trabajo) {
 		if len(t.Registro) > maxRegistro {
 			t.Registro = t.Registro[len(t.Registro)-maxRegistro:]
 		}
+		tocar(t)
 		c.mu.Unlock()
 	}
 
@@ -524,4 +529,27 @@ func sanear(s string, max int) string {
 type Publicacion struct {
 	Titulo      string `json:"titulo,omitempty"`
 	Descripcion string `json:"descripcion,omitempty"`
+}
+
+// Atasco devuelve cuántos trabajos hay sin terminar. El horario lo consulta
+// antes de encolar: con un solo obrero, si la tanda de anoche sigue ahí no
+// tiene sentido apilarle la de hoy encima. Acumular trabajos que nadie va a
+// mirar solo hace más largo el desastre.
+func (c *Cola) Atasco() int {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	n := 0
+	for _, t := range c.trabajos {
+		if t.Estado == EnCola || t.Estado == Corriendo {
+			n++
+		}
+	}
+	return n
+}
+
+// tocar deja constancia de que el trabajo dio señales de vida. Hay que
+// llamarla con el candado tomado.
+func tocar(t *Trabajo) {
+	ahora := time.Now()
+	t.Novedad = &ahora
 }

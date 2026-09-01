@@ -14,6 +14,11 @@ import (
 	"agente-video/internal/trabajos"
 )
 
+// atascoMaximo permite que una tanda normal siga en curso cuando entra la
+// siguiente regla —dos videos tardan media hora larga— pero corta antes de que
+// se acumulen noches enteras.
+const atascoMaximo = 4
+
 // disparador convierte una regla del horario en videos encolados.
 //
 // Aquí es donde el agente deja de ser una herramienta: nadie está delante, así
@@ -23,6 +28,14 @@ import (
 func disparador(banco *temas.Banco, cola *trabajos.Cola, dirPerfiles string) horario.Disparar {
 	return func(ctx context.Context, r horario.Regla) string {
 		log.Printf("horario: disparando %s — %d video(s) de %q", r.ID, r.Cantidad, r.Perfil)
+
+		// Con un solo obrero, encolar sobre una cola atascada no adelanta nada:
+		// solo entierra el problema bajo más trabajos y consume los temas del
+		// banco sin producir un video. Mejor saltarse la noche y dejarlo dicho.
+		if pendientes := cola.Atasco(); pendientes >= atascoMaximo {
+			log.Printf("horario: %d trabajo(s) sin terminar; no se encola nada", pendientes)
+			return fmt.Sprintf("saltado: la cola arrastra %d trabajo(s) sin terminar", pendientes)
+		}
 
 		tomados := banco.Tomar(r.Perfil, r.Cantidad)
 
