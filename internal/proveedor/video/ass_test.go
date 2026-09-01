@@ -171,7 +171,9 @@ func TestGenerarASSPorModo(t *testing.T) {
 		{"ninguna", 1, "Dialogue:"},
 		{"pop", 1, `\fscx112\fscy112`},  // el rebote
 		{"karaoke", 4, `{\c&H0000E5FF`}, // color de palabra activa
-		{"palabra", 4, `\fad(60,50)`},   // un evento por palabra
+		// En "palabra" son 3 y no 4 porque "un" se une a "faro": las palabras
+		// vacías nunca aparecen solas. Ver TestPalabrasVaciasNoSalenSolas.
+		{"palabra", 3, `\fad(60,50)`},
 	}
 	for _, c := range casos {
 		t.Run(c.animacion, func(t *testing.T) {
@@ -279,5 +281,56 @@ func TestVaciaConPuntuacion(t *testing.T) {
 	got := unirPalabrasVacias(entrada)
 	if len(got) != 1 || got[0].texto != "¿Y ahora?" {
 		t.Fatalf("obtuve %+v", got)
+	}
+}
+
+// Comprobación de fondo sobre el ASS ya generado: ningún subtítulo del modo
+// palabra puede consistir en una sola palabra vacía. Es lo que se vio mal en un
+// video real, y conviene vigilarlo sobre la salida y no solo sobre la función.
+func TestElASSNoMuestraArticulosSolos(t *testing.T) {
+	srt := `1
+00:00:00,000 --> 00:00:00,300
+ Al
+
+2
+00:00:00,300 --> 00:00:00,800
+ final
+
+3
+00:00:00,800 --> 00:00:01,000
+ de
+
+4
+00:00:01,000 --> 00:00:01,600
+ todo
+`
+	destino := filepath.Join(t.TempDir(), "out.ass")
+	if err := generarASS(escribirTemp(t, srt), destino, perfilDePrueba("palabra"), "Arial"); err != nil {
+		t.Fatal(err)
+	}
+	datos, _ := os.ReadFile(destino)
+
+	for _, linea := range strings.Split(string(datos), "\n") {
+		if !strings.HasPrefix(linea, "Dialogue:") {
+			continue
+		}
+		partes := strings.SplitN(linea, ",,", 2)
+		if len(partes) != 2 {
+			continue
+		}
+		// Quitar las etiquetas de override para quedarnos con el texto visible.
+		texto := partes[1]
+		for {
+			ini := strings.Index(texto, "{")
+			fin := strings.Index(texto, "}")
+			if ini < 0 || fin < ini {
+				break
+			}
+			texto = texto[:ini] + texto[fin+1:]
+		}
+		texto = strings.TrimSpace(texto)
+		if palabrasVacias[strings.ToLower(texto)] {
+			t.Errorf("el subtítulo %q es una palabra vacía sola", texto)
+		}
 	}
 }
