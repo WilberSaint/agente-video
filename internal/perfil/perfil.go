@@ -110,6 +110,7 @@ type Perfil struct {
 	Imagen     Imagen     `json:"imagen"`
 	Voz        Voz        `json:"voz"`
 	Subtitulos Subtitulos `json:"subtitulos"`
+	Personaje  Personaje  `json:"personaje"`
 	Video      Video      `json:"video"`
 
 	Raiz string `json:"-"` // carpeta del perfil, se llena al cargar
@@ -195,6 +196,9 @@ func (p *Perfil) aplicarValoresPorDefecto() {
 	if p.Video.MaxSegPorImagen == 0 {
 		p.Video.MaxSegPorImagen = 5.0
 	}
+	if p.Personaje.Animacion == "" {
+		p.Personaje.Animacion = "hablar"
+	}
 	if p.Video.EfectosEn == "" {
 		p.Video.EfectosEn = "escena"
 	}
@@ -272,4 +276,28 @@ func (p *Perfil) RutaRelativa(r string) string {
 		return r
 	}
 	return filepath.Join(p.Raiz, r)
+}
+
+// Personaje superpone una figura fija que acompaña la narración. En temas de
+// reflexión o consejo, una cara presente sostiene la atención mucho mejor que
+// una sucesión de paisajes, aunque no diga nada por sí misma.
+type Personaje struct {
+	// Imagen es un PNG con transparencia, relativo a la carpeta del perfil.
+	Imagen   string  `json:"imagen"`
+	Posicion string  `json:"posicion"` // abajo-derecha | abajo-izquierda | abajo-centro
+	AltoPct  float64 `json:"alto_pct"` // % del alto del video que ocupa
+	Margen   int     `json:"margen"`   // px al borde
+	Opacidad float64 `json:"opacidad"` // 1 = opaco
+	// Animacion: ninguna | respirar | hablar.
+	//   respirar – oscilación lenta, solo para que no parezca una calcomanía
+	//   hablar   – se mueve durante los tramos con voz y se detiene en los
+	//              silencios, usando los tiempos por palabra de whisper
+	Animacion string `json:"animacion"`
+
+	// Forma: circulo | recorte | croma | tarjeta.
+	//   circulo – recorte circular. Funciona con cualquier imagen, sin preparar
+	//   recorte – la imagen ya trae transparencia propia
+	//   croma   – se le quita un color de fondo al vuelo
+	Forma      string `json:"forma"`
+	ColorCroma string `json:"color_croma"`
 }

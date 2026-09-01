@@ -2,16 +2,17 @@
   "id": "demo",
   "nombre": "Demo — historias de misterio",
   "idioma": "es",
-
-  "formato": { "ancho": 1080, "alto": 1920, "fps": 30 },
-
+  "formato": {
+    "ancho": 1080,
+    "alto": 1920,
+    "fps": 30
+  },
   "guion": {
     "tono": "íntimo y en segunda persona, como quien cuenta un secreto en voz baja; frases cortas",
     "duracion_seg": 45,
     "escenas": 7,
     "instrucciones_extra": "Nunca reveles el desenlace antes de la última escena."
   },
-
   "imagen": {
     "proveedor": "pollinations",
     "modelo": "flux",
@@ -21,17 +22,15 @@
     "referencia": "referencia/",
     "personaje": ""
   },
-
   "voz": {
     "proveedor": "piper",
     "modelo": "../../bin/voces/es_MX-claude-high.onnx",
-    "velocidad": 1.0,
+    "velocidad": 1,
     "expresividad": 0.95,
     "variacion": 0.72,
     "procesar": true,
     "presencia": 3.5
   },
-
   "subtitulos": {
     "activos": true,
     "fuente": "Arial",
@@ -45,7 +44,6 @@
     "color_activo": "&H0000E5FF&",
     "escala_pop": 112
   },
-
   "video": {
     "proveedor": "kenburns",
     "transicion": "fade",
@@ -53,18 +51,20 @@
     "zoom": 1.18,
     "musica": "../../assets/musica/u_epz2n8s2sa-gentle-reflections-322721.mp3",
     "volumen_musica": 0.12,
-
     "min_seg_por_imagen": 1.8,
-
-    "max_seg_por_imagen": 5.0,
-
-
+    "max_seg_por_imagen": 5,
     "efecto_transicion": "../../assets/efectos/whoosh.wav",
-
-
-    "volumen_efectos": 0.30,
-
-
+    "volumen_efectos": 0.3,
     "efectos_en": "escena"
+  },
+  "personaje": {
+    "imagen": "personaje/narrador.jpg",
+    "posicion": "abajo-derecha",
+    "alto_pct": 19,
+    "margen": 44,
+    "opacidad": 1,
+    "animacion": "hablar",
+    "forma": "circulo",
+    "color_croma": ""
   }
 }

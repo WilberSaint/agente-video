@@ -87,7 +87,22 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	for _, img := range imagenes {
 		args = append(args, "-i", img)
 	}
+	// El personaje entra como imagen fija antes del audio, para que su índice
+	// no dependa de cuántas pistas de sonido acabe habiendo.
+	idxPersonaje := -1
+	if rp := p.RutaRelativa(p.Personaje.Imagen); rp != "" {
+		if _, err := os.Stat(rp); err == nil {
+			idxPersonaje = n
+			args = append(args, "-i", rp)
+		} else {
+			k.avisar("no se encontró la imagen del personaje %s; se omite", rp)
+		}
+	}
+
 	idxAudio := n
+	if idxPersonaje >= 0 {
+		idxAudio = n + 1
+	}
 	args = append(args, "-i", req.Audio)
 
 	// La mezcla decide qué entradas de audio más hacen falta (música, efectos)
@@ -156,14 +171,36 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 				fuente = "Arial"
 			}
 
+			// Si hay personaje abajo, los subtítulos suben para no quedar
+			// debajo de él. Se trabaja sobre una copia del perfil para no
+			// alterar el que vino del disco.
+			conMargen := *p
+			if m := MargenSubtitulos(p); m != p.Subtitulos.MargenV {
+				k.avisar("subtítulos subidos de %dpx a %dpx para no quedar bajo el personaje",
+					p.Subtitulos.MargenV, m)
+				conMargen.Subtitulos.MargenV = m
+			}
+
 			// Generamos el ASS con la resolución real del video (ver ass.go).
 			rutaASS := strings.TrimSuffix(req.SRT, filepath.Ext(req.SRT)) + ".ass"
-			if err := generarASS(req.SRT, rutaASS, p, fuente); err != nil {
+			if err := generarASS(req.SRT, rutaASS, &conMargen, fuente); err != nil {
 				return fmt.Errorf("preparando subtítulos: %w", err)
 			}
 			filtros = append(filtros, fmt.Sprintf("[%s]ass='%s'[vout]",
 				ultimo, herramientas.RutaParaFiltro(rutaASS)))
 			ultimo = "vout"
+		}
+	}
+
+	// El personaje va encima de todo, subtítulos incluidos: es la capa más
+	// cercana al espectador y no debe quedar tapada por el texto.
+	if idxPersonaje >= 0 {
+		fPj, salida := filtroPersonaje(p, idxPersonaje, ultimo, palabras, duracionAudio)
+		if fPj != "" {
+			filtros = append(filtros, fPj)
+			ultimo = salida
+			k.avisar("personaje superpuesto (%s, animación %q)",
+				p.Personaje.Imagen, p.Personaje.Animacion)
 		}
 	}
 

@@ -458,3 +458,50 @@ Para instalar otra voz, de [piper-voices](https://huggingface.co/rhasspy/piper-v
 **El siguiente escalón es Kokoro**: bastante mejor que Piper, también gratis y
 en CPU, pero necesita Python instalado. Piper se eligió porque permitía llegar a
 un video terminado sin añadir un runtime entero.
+
+---
+
+## Personaje narrador
+
+Superpone una figura fija que acompaña la narración. En temas de reflexión o
+consejo, una cara presente sostiene la atención mucho mejor que una sucesión de
+paisajes.
+
+```json
+"personaje": {
+  "imagen": "personaje/narrador.jpg",
+  "forma": "circulo",
+  "posicion": "abajo-derecha",
+  "alto_pct": 19,
+  "margen": 44,
+  "opacidad": 1,
+  "animacion": "hablar"
+}
+```
+
+**No hay sincronía labial** — eso exige un modelo y una GPU. Pero sí tenemos los
+tiempos de cada palabra, así que el personaje **se mueve mientras se habla y se
+detiene en los silencios**. El ojo lee ese acoplamiento como "está narrando"
+aunque la boca no cambie: es el truco de los muñecos de guiñol. Sin esa
+sincronía —moviéndose siempre igual— queda una calcomanía animada encima.
+
+| Campo | |
+|---|---|
+| `forma` | `circulo` (por defecto), `recorte`, `croma`, `tarjeta` |
+| `animacion` | `hablar`, `respirar` (oscilación lenta), `ninguna` |
+| `alto_pct` | % del alto del video. **18-22 va bien**; más grande compite con la escena |
+| `posicion` | `abajo-derecha`, `abajo-izquierda`, `abajo-centro` |
+
+### Por qué `circulo` es el modo por defecto
+
+Un PNG bien recortado es lo ideal, pero hay que prepararlo. Probado con
+generadores libres: ignoran la instrucción de fondo croma, y **cuando la
+respetan visten al personaje del mismo color**, con lo que el recorte se come la
+ropa. El círculo funciona con cualquier imagen sin preparación —una foto tuya,
+un avatar, un fotograma— y en vertical se lee como decisión de diseño.
+
+Si tienes un PNG con transparencia de verdad, usa `"forma": "recorte"`.
+
+**Los subtítulos se suben solos** para no quedar bajo el personaje. Sin eso el
+círculo los corta, y es un fallo que no da ningún error: solo se ve mirando el
+video terminado.
