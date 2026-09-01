@@ -214,9 +214,29 @@ haciendo falta una llave. Donde sí paga es al mover la generación a CI.
 ## El panel
 
 ```powershell
-.\agente-video.exe servir
+.gente-video.exe servir
 # panel en http://127.0.0.1:8787
 ```
+
+**El panel es un programa que tiene que estar corriendo.** Mientras esa ventana
+esté abierta, el panel responde y el horario vigila; al cerrarla, todo se
+detiene. Lo que hay en disco no se pierde —videos, banco de temas, reglas y
+cola— y un video a medio generar se reencola y retoma desde sus checkpoints.
+
+### Que arranque solo con Windows
+
+Un horario a las tres de la mañana no sirve de nada si el programa se apagó al
+cerrar sesión. Como administrador:
+
+```powershell
+.\instalar-servicio.ps1          # registra una tarea que arranca con el sistema
+.\instalar-servicio.ps1 -Quitar  # la elimina
+```
+
+Se usa una tarea programada y no un servicio de Windows porque un ejecutable
+normal no habla el protocolo de servicios: registrarlo como tal exigiría un
+envoltorio tipo NSSM. La tarea consigue lo mismo —arranca sin sesión iniciada,
+sobrevive a reinicios y se reintenta sola si falla— sin añadir dependencias.
 
 Eliges perfil, escribes **un tema por línea** y pulsa Generar. Los trabajos se
 encolan y se procesan **de uno en uno**, con la barra de progreso actualizándose
