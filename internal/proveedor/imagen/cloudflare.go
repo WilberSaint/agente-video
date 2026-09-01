@@ -47,10 +47,14 @@ func (c *Cloudflare) Generar(ctx context.Context, req proveedor.PeticionImagen) 
 		return "", fmt.Errorf("cloudflare: faltan CF_ACCOUNT_ID y/o CF_API_TOKEN")
 	}
 
+	// Sin "seed": flux-1-schnell en Workers AI rechaza cualquier propiedad que
+	// no esté en su esquema y responde 400. Comprobado contra la API: acepta
+	// "prompt" y "steps", nada más. La consecuencia es que en este proveedor no
+	// se puede fijar la semilla, y con ella se pierde la coherencia de
+	// personajes entre planos.
 	cuerpo, err := json.Marshal(map[string]any{
 		"prompt": req.Prompt,
 		"steps":  4, // schnell está afinado para 4 pasos
-		"seed":   req.Semilla,
 	})
 	if err != nil {
 		return "", err
@@ -77,7 +81,13 @@ func (c *Cloudflare) Generar(ctx context.Context, req proveedor.PeticionImagen) 
 		return "", err
 	}
 	if respuesta.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("cloudflare devolvió %d: %s", respuesta.StatusCode, recorta(datos, 400))
+		err := fmt.Errorf("cloudflare devolvió %d: %s", respuesta.StatusCode, recorta(datos, 400))
+		// Un 4xx que no sea 429 significa que la petición está mal: reintentarla
+		// da exactamente el mismo error y entierra la causa.
+		if respuesta.StatusCode >= 400 && respuesta.StatusCode < 500 && respuesta.StatusCode != http.StatusTooManyRequests {
+			return "", proveedor.Permanente(err)
+		}
+		return "", err
 	}
 
 	var r respuestaCF
@@ -107,3 +117,8 @@ func recorta(b []byte, n int) string {
 }
 
 var _ proveedor.Imagenero = (*Cloudflare)(nil)
+
+// SoportaSemilla es false: flux-1-schnell en Workers AI no admite el parámetro.
+// Lo que se pierde es la coherencia de personajes entre planos, que se conseguía
+// compartiendo semilla.
+func (c *Cloudflare) SoportaSemilla() bool { return false }

@@ -62,3 +62,7 @@ func (p *Pollinations) Generar(ctx context.Context, req proveedor.PeticionImagen
 }
 
 var _ proveedor.Imagenero = (*Pollinations)(nil)
+
+// SoportaSemilla es true: Pollinations respeta el parámetro seed, y con él la
+// coherencia entre planos del mismo sujeto.
+func (p *Pollinations) SoportaSemilla() bool { return true }

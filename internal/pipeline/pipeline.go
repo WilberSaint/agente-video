@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -197,6 +198,17 @@ func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
 	total := g.TotalPlanos()
 	hechas := 0
 
+	// Si el guion tiene sujetos recurrentes pero el proveedor no respeta la
+	// semilla, la coherencia entre planos se pierde. No es un error —el video
+	// sale igual— pero conviene decirlo antes de que se note en el resultado.
+	if !pl.prov.Imagenero.SoportaSemilla() {
+		if sujetos := sujetosRecurrentes(g); len(sujetos) > 0 {
+			pl.opt.Registro("      aviso: %s no admite semilla fija, así que los "+
+				"sujetos recurrentes (%s) pueden no verse iguales entre planos",
+				pl.prov.Imagenero.Nombre(), strings.Join(sujetos, ", "))
+		}
+	}
+
 	for _, esc := range g.Escenas {
 		render := proveedor.EscenaRender{Narracion: esc.Narracion}
 
@@ -235,6 +247,12 @@ func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
 					return nil, ctx.Err()
 				}
 				pl.opt.Registro("      falló: %v", err)
+				// Reintentar un error permanente da el mismo resultado y entierra
+				// la causa real bajo "tras N intentos".
+				if proveedor.EsPermanente(err) {
+					pl.opt.Registro("      el error no cambia reintentando; se aborta")
+					break
+				}
 				time.Sleep(time.Duration(intento*3) * time.Second)
 			}
 			if err != nil {
@@ -392,4 +410,25 @@ func (pl *Pipeline) avanzar(etapa int, etiqueta string, hecho, total int, detall
 		return
 	}
 	pl.opt.Avance(Avance{Etapa: etapa, Etiqueta: etiqueta, Hecho: hecho, Total: total, Detalle: detalle})
+}
+
+// sujetosRecurrentes devuelve los sujetos que aparecen en más de un plano, que
+// son los únicos donde la coherencia entre imágenes importa.
+func sujetosRecurrentes(g *proveedor.GuionGenerado) []string {
+	cuenta := map[string]int{}
+	for _, e := range g.Escenas {
+		for _, p := range e.Planos {
+			if s := strings.TrimSpace(p.Sujeto); s != "" {
+				cuenta[s]++
+			}
+		}
+	}
+	var out []string
+	for s, n := range cuenta {
+		if n > 1 {
+			out = append(out, s)
+		}
+	}
+	sort.Strings(out) // orden estable: el aviso no debe bailar entre ejecuciones
+	return out
 }

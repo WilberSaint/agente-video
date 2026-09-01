@@ -5,6 +5,7 @@ package proveedor
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	"agente-video/internal/perfil"
@@ -114,6 +115,10 @@ type PeticionImagen struct {
 type Imagenero interface {
 	Nombre() string
 	Generar(ctx context.Context, req PeticionImagen) (string, error)
+	// SoportaSemilla indica si el proveedor respeta PeticionImagen.Semilla.
+	// Importa porque la coherencia de personajes se consigue compartiendo
+	// semilla entre planos: sin ella, esa técnica simplemente no aplica.
+	SoportaSemilla() bool
 }
 
 // ---------- Voz ----------
@@ -178,4 +183,21 @@ func (p PeticionVideo) Imagenes() []string {
 type Videasta interface {
 	Nombre() string
 	Ensamblar(ctx context.Context, req PeticionVideo) error
+}
+
+// ErrorPermanente marca un fallo que no va a cambiar por reintentar: una
+// petición mal formada, una credencial inválida, un modelo inexistente.
+//
+// Sin esta distinción el pipeline reintenta tres veces un error 400 idéntico,
+// pierde varios segundos y entierra la causa real bajo "tras 3 intentos".
+type ErrorPermanente struct{ Err error }
+
+func (e *ErrorPermanente) Error() string { return e.Err.Error() }
+func (e *ErrorPermanente) Unwrap() error { return e.Err }
+
+func Permanente(err error) error { return &ErrorPermanente{Err: err} }
+
+func EsPermanente(err error) bool {
+	var p *ErrorPermanente
+	return errors.As(err, &p)
 }
