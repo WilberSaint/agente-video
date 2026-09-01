@@ -13,16 +13,28 @@ const conectado = ref(false)
 let fuente = null
 
 // Un tema por línea. Escribir cinco y encolarlos de golpe es la diferencia
-// entre lanzar uno y dejar la máquina trabajando toda la noche.
+// entre lanzar un video y dejar la máquina trabajando toda la noche.
 const listaTemas = computed(() =>
   temas.value.split('\n').map((t) => t.trim()).filter(Boolean)
 )
 
 const enCurso = computed(() => trabajos.value.filter((t) => t.estado === 'corriendo'))
 const enCola = computed(() => trabajos.value.filter((t) => t.estado === 'en_cola'))
+const listos = computed(() => trabajos.value.filter((t) => t.estado === 'terminado'))
 const cerrados = computed(() =>
-  trabajos.value.filter((t) => !['corriendo', 'en_cola'].includes(t.estado))
+  trabajos.value.filter((t) => ['fallido', 'cancelado'].includes(t.estado))
 )
+
+// Cada video tarda unos doce minutos y se hacen en serie: con cinco en cola,
+// saber que son dos horas cambia si te esperas o te vas.
+const esperaTotal = computed(() => {
+  const n = enCola.value.length + enCurso.value.length
+  if (!n) return ''
+  const min = Math.round(n * 12)
+  if (min < 60) return `~${min} min en total`
+  const h = Math.floor(min / 60)
+  return `~${h}h ${min % 60}min en total`
+})
 
 function fusionar(t) {
   const i = trabajos.value.findIndex((x) => x.id === t.id)
@@ -43,9 +55,13 @@ function conectar() {
 }
 
 async function cargarPerfiles() {
-  const r = await fetch('/api/perfiles')
-  perfiles.value = await r.json()
-  if (!perfil.value && perfiles.value.length) perfil.value = perfiles.value[0].id
+  try {
+    const r = await fetch('/api/perfiles')
+    perfiles.value = await r.json()
+    if (!perfil.value && perfiles.value.length) perfil.value = perfiles.value[0].id
+  } catch (e) {
+    error.value = 'no se pudieron cargar los perfiles'
+  }
 }
 
 async function encolar() {
@@ -74,6 +90,16 @@ async function cancelar(id) {
 async function olvidar(id) {
   await fetch(`/api/trabajos/${id}`, { method: 'DELETE' })
   trabajos.value = trabajos.value.filter((t) => t.id !== id)
+}
+
+// Reintentar es volver a encolar el mismo tema: los checkpoints hacen que
+// retome donde se quedó en vez de empezar de cero.
+async function reintentar(t) {
+  await fetch('/api/trabajos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ perfil: t.perfil, tema: t.tema }),
+  })
 }
 
 const perfilActual = computed(() => perfiles.value.find((p) => p.id === perfil.value))
@@ -108,7 +134,9 @@ onUnmounted(() => fuente && fuente.close())
       </div>
 
       <label>
-        <span class="etiqueta">Temas <span class="silencio">— uno por línea</span></span>
+        <span class="etiqueta">
+          Temas <span class="silencio">— uno por línea</span>
+        </span>
         <textarea
           v-model="temas"
           rows="4"
@@ -121,29 +149,44 @@ onUnmounted(() => fuente && fuente.close())
         <button class="principal" :disabled="!listaTemas.length || enviando" @click="encolar">
           {{ listaTemas.length > 1 ? `Encolar ${listaTemas.length} videos` : 'Generar video' }}
         </button>
-        <span class="silencio pequeno">Ctrl+Enter</span>
+        <span class="silencio pequeno atajo">Ctrl+Enter</span>
+        <span v-if="listaTemas.length > 1" class="silencio pequeno">
+          ~{{ Math.round(listaTemas.length * 12) }} min de generación
+        </span>
         <span v-if="error" class="error pequeno">{{ error }}</span>
       </div>
     </section>
 
     <template v-if="enCurso.length">
       <h2>En curso</h2>
-      <Trabajo v-for="t in enCurso" :key="t.id" :t="t" @cancelar="cancelar" @olvidar="olvidar" />
+      <Trabajo v-for="t in enCurso" :key="t.id" :t="t"
+               @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
     </template>
 
     <template v-if="enCola.length">
-      <h2>En cola <span class="silencio">({{ enCola.length }})</span></h2>
-      <Trabajo v-for="t in enCola" :key="t.id" :t="t" @cancelar="cancelar" @olvidar="olvidar" />
+      <h2>
+        En cola <span class="silencio">({{ enCola.length }})</span>
+        <span v-if="esperaTotal" class="silencio normal">— {{ esperaTotal }}</span>
+      </h2>
+      <Trabajo v-for="t in enCola" :key="t.id" :t="t"
+               @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
     </template>
 
     <!-- Siempre visible, incluso vacía: una sección que aparece y desaparece
          hace dudar de si el video se guardó en algún sitio. -->
-    <h2>Terminados</h2>
-    <Trabajo v-for="t in cerrados" :key="t.id" :t="t" @cancelar="cancelar" @olvidar="olvidar" />
-    <p v-if="!cerrados.length" class="tarjeta silencio pequeno vacio-seccion">
+    <h2>Listos <span v-if="listos.length" class="silencio">({{ listos.length }})</span></h2>
+    <Trabajo v-for="t in listos" :key="t.id" :t="t"
+             @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
+    <p v-if="!listos.length" class="tarjeta silencio pequeno vacio-seccion">
       Aún no hay videos terminados. Los que generes aparecerán aquí y podrás verlos
       sin salir de esta página.
     </p>
+
+    <template v-if="cerrados.length">
+      <h2>Fallidos y cancelados</h2>
+      <Trabajo v-for="t in cerrados" :key="t.id" :t="t"
+               @cancelar="cancelar" @olvidar="olvidar" @reintentar="reintentar" />
+    </template>
   </div>
 </template>
 
@@ -172,6 +215,15 @@ label { display: block; }
 
 h2 { font-size: 14px; text-transform: uppercase; letter-spacing: 0.07em;
      color: var(--suave); margin: 30px 0 10px; font-weight: 600; }
+h2 .normal { text-transform: none; letter-spacing: 0; font-weight: 400; }
 
 .vacio-seccion { text-align: center; padding: 22px 18px; }
+
+/* En móvil la acción principal ocupa el ancho: es el objetivo de la pantalla
+   y el pulgar no debería tener que buscarla. */
+@media (max-width: 560px) {
+  .acciones { gap: 8px; }
+  .acciones .principal { width: 100%; }
+  .atajo { display: none; }
+}
 </style>

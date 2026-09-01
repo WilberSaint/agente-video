@@ -1,4 +1,6 @@
-# agente-video
+| `imagen.personaje` | descripción física repetida en cada prompt, para personajes recurrentes |
+| `voz.procesar` | ecualiza, comprime y normaliza la voz. Es lo que más quita la sensación robótica |
+| `voz.expresividad` | 0.8 es el neutro de Piper; 0.95 rompe la cadencia de metrónomo |# agente-video
 
 Genera videos verticales cortos (TikTok / Reels / Shorts) a partir de **un tema
 y un perfil**: guion, imágenes, narración, subtítulos y montaje, sin intervención
@@ -412,3 +414,49 @@ Ejemplo, un generador de video real (Sora, Kling, Runway) cuando llegue el momen
 3. Poner `"proveedor": "kling"` en el `video` del perfil.
 
 Nada más cambia. Los perfiles que sigan en `kenburns` no se enteran.
+
+---
+
+## La voz
+
+Un TTS crudo suena plano por tres razones concretas, y el procesado ataca cada
+una: le sobra grave y le falta presencia, la dinámica es irregular (unas sílabas
+salen bastante más fuertes que otras), y las eses salen afiladas porque no hay
+un micrófono real que las suavice.
+
+```json
+"voz": {
+  "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+  "velocidad": 1.0,
+  "expresividad": 0.95,
+  "variacion": 0.72,
+  "procesar": true,
+  "presencia": 3.5
+}
+```
+
+| Campo | Qué hace |
+|---|---|
+| `expresividad` | Varía la duración de cada fonema. **Es lo que más combate lo robótico**: con todos los fonemas midiendo casi lo mismo, la voz cae en cadencia de metrónomo. 0.8 es el neutro de Piper, 0.95 va bien, por encima de 1.0 se desestabiliza |
+| `variacion` | Afecta al timbre. Pasado 0.8 empieza a sonar ebrio |
+| `procesar` | Ecualización, de-esser, compresión y normalización a −16 LUFS |
+| `presencia` | dB de realce en 3.2 kHz. Sube la inteligibilidad, sobre todo con música encima |
+
+Con `procesar` activo, el audio sin tratar queda al lado como `03-voz.crudo.wav`
+para poder comparar.
+
+### Comparar voces
+
+`muestras-voz/comparar.html` tiene el mismo texto en las cuatro voces
+instaladas, cruda y procesada. Ábrelo en el navegador y escucha con auriculares:
+en altavoces de portátil la diferencia casi no se aprecia.
+
+Para instalar otra voz, de [piper-voices](https://huggingface.co/rhasspy/piper-voices):
+
+```powershell
+.\instalar.ps1 -Voz es_ES-davefx-medium
+```
+
+**El siguiente escalón es Kokoro**: bastante mejor que Piper, también gratis y
+en CPU, pero necesita Python instalado. Piper se eligió porque permitía llegar a
+un video terminado sin añadir un runtime entero.

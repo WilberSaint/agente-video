@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
 const props = defineProps({ t: { type: Object, required: true } })
-defineEmits(['cancelar', 'olvidar'])
+defineEmits(['cancelar', 'olvidar', 'reintentar'])
 
 const abierto = ref(false)
 const verRegistro = ref(false)
@@ -65,7 +65,14 @@ const restante = computed(() => {
         <button v-if="activo || t.estado === 'en_cola'" class="tenue" @click="$emit('cancelar', t.id)">
           cancelar
         </button>
-        <button v-else class="tenue" @click="$emit('olvidar', t.id)">quitar</button>
+        <template v-else>
+          <!-- Reintentar reencola el mismo tema. No empieza de cero: los
+               checkpoints hacen que retome donde se quedó. -->
+          <button v-if="t.estado === 'fallido'" class="tenue rehacer" @click="$emit('reintentar', t)">
+            reintentar
+          </button>
+          <button class="tenue" @click="$emit('olvidar', t.id)">quitar</button>
+        </template>
       </div>
     </div>
 
@@ -142,6 +149,7 @@ h3 { margin: 6px 0 0; font-size: 16px; font-weight: 600; line-height: 1.35; }
 .resultado { margin-top: 13px; display: flex; flex-direction: column; gap: 9px; align-items: start; }
 video { width: 100%; max-width: 300px; border-radius: 8px; background: #000; display: block; }
 .enlace { color: var(--acento); }
+.rehacer:hover { color: var(--acento); }
 
 .registro { margin-top: 10px; }
 .registro pre {

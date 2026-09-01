@@ -38,6 +38,20 @@ type Voz struct {
 	Proveedor string  `json:"proveedor"` // piper
 	Modelo    string  `json:"modelo"`    // ruta al .onnx
 	Velocidad float64 `json:"velocidad"`
+
+	// Expresividad varía la duración de cada fonema. Es el parámetro que más
+	// combate la sensación robótica: con todos los fonemas midiendo casi lo
+	// mismo, la voz cae en una cadencia de metrónomo. 0.8 es el valor neutro
+	// de Piper; subirlo a 0.9-1.0 da un habla menos regular y más humana, y
+	// pasarse la vuelve inestable.
+	Expresividad float64 `json:"expresividad"`
+	// Variacion afecta al timbre. Por encima de 0.8 empieza a sonar ebrio.
+	Variacion float64 `json:"variacion"`
+
+	// Procesar aplica ecualización, compresión y normalización sobre el audio
+	// generado. Es lo que más acerca el resultado a una voz grabada.
+	Procesar  bool    `json:"procesar"`
+	Presencia float64 `json:"presencia"` // dB de realce en 3.2 kHz
 }
 
 type Subtitulos struct {

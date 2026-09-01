@@ -274,10 +274,10 @@ func (pl *Pipeline) etapaVoz(ctx context.Context, p *perfil.Perfil, g *proveedor
 	pl.avanzar(3, "voz", 0, 1, "sintetizando la narración")
 	pl.opt.Registro("[3/5] sintetizando narración con %s…", pl.prov.Locutor.Nombre())
 	return pl.prov.Locutor.Sintetizar(ctx, proveedor.PeticionVoz{
-		Texto:     g.NarracionCompleta(),
-		Modelo:    p.RutaRelativa(p.Voz.Modelo),
-		Velocidad: p.Voz.Velocidad,
-		Destino:   ruta,
+		Texto:   g.NarracionCompleta(),
+		Modelo:  p.RutaRelativa(p.Voz.Modelo),
+		Destino: ruta,
+		Voz:     p.Voz,
 	})
 }
 

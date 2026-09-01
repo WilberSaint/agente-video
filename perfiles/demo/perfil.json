@@ -25,7 +25,11 @@
   "voz": {
     "proveedor": "piper",
     "modelo": "../../bin/voces/es_MX-claude-high.onnx",
-    "velocidad": 1.0
+    "velocidad": 1.0,
+    "expresividad": 0.95,
+    "variacion": 0.72,
+    "procesar": true,
+    "presencia": 3.5
   },
 
   "subtitulos": {

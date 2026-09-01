@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Comparar voces — agente-video</title>
+<style>
+  :root { --tinta:#16181d; --suave:#5f6675; --linea:#e4e7ec; --fondo:#fafafc;
+          --acento:#2f6feb; --ok:#1f8a54; }
+  @media (prefers-color-scheme:dark){
+    :root { --tinta:#e9ebf0; --suave:#98a0af; --linea:#272b34; --fondo:#111318; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--fondo);color:var(--tinta);
+       font:16px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif}
+  .env{max-width:880px;margin:0 auto;padding:40px 22px 80px}
+  h1{font-size:24px;margin:0 0 6px;letter-spacing:-.02em}
+  .intro{color:var(--suave);margin:0 0 8px}
+  blockquote{margin:22px 0 34px;padding:14px 18px;border-left:3px solid var(--acento);
+             background:rgba(127,127,127,.06);border-radius:0 8px 8px 0;font-style:italic}
+  .voz{background:var(--fondo);border:1px solid var(--linea);border-radius:10px;
+       padding:18px 20px;margin-bottom:14px}
+  .voz h2{font-size:17px;margin:0 0 2px}
+  .voz .meta{color:var(--suave);font-size:13px;margin:0 0 14px}
+  .par{display:grid;grid-template-columns:110px 1fr;gap:12px;align-items:center;margin-bottom:10px}
+  .par span{font-size:13px;color:var(--suave)}
+  .par .destacado{color:var(--ok);font-weight:600}
+  audio{width:100%;height:36px}
+  .actual{border-color:var(--acento)}
+  .chip{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+        padding:2px 8px;border-radius:999px;border:1px solid var(--acento);
+        color:var(--acento);margin-left:8px;vertical-align:2px}
+  .como{margin-top:38px;padding-top:22px;border-top:1px solid var(--linea);color:var(--suave);font-size:14px}
+  code{font-family:ui-monospace,Consolas,monospace;font-size:13px;
+       background:rgba(127,127,127,.12);padding:1px 5px;border-radius:4px}
+</style>
+</head>
+<body><div class="env">
+
+<h1>Comparar voces</h1>
+<p class="intro">Mismo texto en las cuatro voces disponibles, cruda y procesada.
+Escucha con auriculares: la diferencia está en la presencia y en la dinámica,
+y en altavoces de portátil casi no se aprecia.</p>
+
+<blockquote>Hay un faro en la costa norte que sigue encendido. Nadie lo atiende
+desde hace cuarenta años. El último farero salió una mañana de marzo y jamás volvió.</blockquote>
+
+<div class="voz actual">
+  <h2>es_MX-claude-high <span class="chip">la que usas ahora</span></h2>
+  <p class="meta">México · calidad alta</p>
+  <div class="par"><span>crudo</span><audio controls preload="none" src="es_MX-claude-high-crudo.mp3"></audio></div>
+  <div class="par"><span class="destacado">mejorado</span><audio controls preload="none" src="es_MX-claude-high-mejorado.mp3"></audio></div>
+</div>
+
+<div class="voz">
+  <h2>es_MX-ald-medium</h2>
+  <p class="meta">México · calidad media · otra persona</p>
+  <div class="par"><span>crudo</span><audio controls preload="none" src="es_MX-ald-medium-crudo.mp3"></audio></div>
+  <div class="par"><span class="destacado">mejorado</span><audio controls preload="none" src="es_MX-ald-medium-mejorado.mp3"></audio></div>
+</div>
+
+<div class="voz">
+  <h2>es_ES-davefx-medium</h2>
+  <p class="meta">España · calidad media</p>
+  <div class="par"><span>crudo</span><audio controls preload="none" src="es_ES-davefx-medium-crudo.mp3"></audio></div>
+  <div class="par"><span class="destacado">mejorado</span><audio controls preload="none" src="es_ES-davefx-medium-mejorado.mp3"></audio></div>
+</div>
+
+<div class="voz">
+  <h2>es_ES-sharvard-medium</h2>
+  <p class="meta">España · calidad media</p>
+  <div class="par"><span>crudo</span><audio controls preload="none" src="es_ES-sharvard-medium-crudo.mp3"></audio></div>
+  <div class="par"><span class="destacado">mejorado</span><audio controls preload="none" src="es_ES-sharvard-medium-mejorado.mp3"></audio></div>
+</div>
+
+<div class="como">
+  <p><strong>Qué cambia en “mejorado”:</strong> expresividad subida
+  (<code>noise_w 0.95</code>, que rompe la cadencia de metrónomo), menos grave
+  de caja, realce de presencia en 3.2&nbsp;kHz, eses domadas, compresión para
+  nivelar sílabas y normalización a −16&nbsp;LUFS.</p>
+
+  <p><strong>Para aplicarlo</strong>, en <code>perfiles/&lt;id&gt;/perfil.json</code>:</p>
+  <pre><code>"voz": {
+  "proveedor": "piper",
+  "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+  "velocidad": 1.0,
+  "expresividad": 0.95,
+  "variacion": 0.72,
+  "procesar": true,
+  "presencia": 3.5
+}</code></pre>
+
+  <p>Si ninguna te convence, el siguiente escalón es <strong>Kokoro</strong>:
+  bastante mejor, también gratis y en CPU, pero necesita Python instalado.</p>
+</div>
+
+</div></body></html>

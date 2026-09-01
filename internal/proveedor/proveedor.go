@@ -119,10 +119,12 @@ type Imagenero interface {
 // ---------- Voz ----------
 
 type PeticionVoz struct {
-	Texto     string
-	Modelo    string
-	Velocidad float64
-	Destino   string // .wav
+	Texto   string
+	Modelo  string
+	Destino string // .wav
+	// Voz lleva la configuración completa del perfil: velocidad, procesado y
+	// los parámetros de expresividad.
+	Voz perfil.Voz
 }
 
 type Locutor interface {
