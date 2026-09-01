@@ -403,6 +403,13 @@ func (c *Cola) guardar() {
 		return
 	}
 	_ = os.MkdirAll(filepath.Dir(c.ruta), 0o755)
+	// Si la carpeta ya no existe, no se recrea. Sin esta comprobación, un
+	// guardado tardío del obrero podía resucitar el directorio justo cuando
+	// alguien acababa de borrarlo, y dejarlo con un archivo suelto dentro.
+	if _, err := os.Stat(filepath.Dir(c.ruta)); err != nil {
+		return
+	}
+
 	// Escritura atómica: un corte a media escritura dejaría cola.json corrupto
 	// y se perdería la cola entera. Si el rename falla, el temporal se limpia
 	// para no dejar basura en la carpeta.

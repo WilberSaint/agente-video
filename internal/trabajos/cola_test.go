@@ -34,7 +34,10 @@ func colaDePrueba(t *testing.T, ej Ejecutor) *Cola {
 	c.Arrancar(ctx)
 	t.Cleanup(func() {
 		cancelar()
-		c.Esperar(3 * time.Second) // que no borre el TempDir a media escritura
+		// Tope generoso: si el obrero está sano sale enseguida, y bajo carga
+		// —estas pruebas pueden correr mientras se renderiza un video— tres
+		// segundos no bastaban y el TempDir se borraba a media escritura.
+		c.Esperar(20 * time.Second)
 	})
 	return c
 }
@@ -209,7 +212,7 @@ func TestUnReinicioConservaLaCarpeta(t *testing.T) {
 	// limpieza del TempDir a media escritura.
 	defer func() {
 		cancelar()
-		c.Esperar(5 * time.Second)
+		c.Esperar(20 * time.Second)
 	}()
 
 	select {
