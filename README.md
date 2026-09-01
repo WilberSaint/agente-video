@@ -1,6 +1,4 @@
-| `imagen.personaje` | descripción física repetida en cada prompt, para personajes recurrentes |
-| `voz.procesar` | ecualiza, comprime y normaliza la voz. Es lo que más quita la sensación robótica |
-| `voz.expresividad` | 0.8 es el neutro de Piper; 0.95 rompe la cadencia de metrónomo |# agente-video
+# agente-video
 
 Genera videos verticales cortos (TikTok / Reels / Shorts) a partir de **un tema
 y un perfil**: guion, imágenes, narración, subtítulos y montaje, sin intervención
