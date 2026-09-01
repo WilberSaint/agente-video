@@ -81,7 +81,7 @@ bloques de código markdown. Esquema exacto:
     {
       "narracion": "lo que dice la voz en off en esta escena",
       "planos": [
-        {"prompt": "descripción visual EN INGLÉS", "encuadre": "general"}
+        {"prompt": "descripción visual EN INGLÉS", "encuadre": "general", "sujeto": ""}
       ]
     }
   ]
@@ -110,6 +110,10 @@ PLANOS
 - "prompt" va SIEMPRE en inglés. Descripción visual concreta y fotografiable:
   sujeto, entorno, luz, punto de vista. Nunca texto, letreros ni palabras que
   deban aparecer escritas en la imagen, porque salen deformadas.
+- Las caras humanas salen deformadas cuando la persona ocupa poco de la imagen.
+  Si en un plano hay un personaje del que se le ve la cara, usa encuadre medio,
+  cercano o detalle. Reserva el encuadre general para lugares, ambientes y
+  objetos, o para figuras vistas de espaldas o a contraluz.
 
 COHERENCIA
 
@@ -123,7 +127,14 @@ same man" ni "he" — el generador no sabe a quién te refieres. Repite "a
 weathered man in his sixties, gray beard, dark wool coat" cada vez.
 
 Lo mismo con la época y la luz: si la historia ocurre de noche bajo lluvia en
-1890, esos tres datos van en todos los prompts.`
+1890, esos tres datos van en todos los prompts.
+
+Además, marca en "sujeto" un identificador corto y estable de quién o qué es lo
+recurrente en ese plano: "mujer", "farero", "biblioteca". Usa EXACTAMENTE la
+misma cadena en todos los planos donde aparezca. Sirve para generarlos con la
+misma semilla, que es lo que de verdad hace que se vean como el mismo
+personaje. Deja "sujeto" vacío en los planos de ambiente, objetos sueltos o
+imágenes conceptuales que no repiten nada.`
 
 func (c *Claude) Generar(ctx context.Context, p *perfil.Perfil, tema string) (*proveedor.GuionGenerado, error) {
 	palabras := p.Guion.DuracionSeg * 5 / 2 // ~150 palabras por minuto

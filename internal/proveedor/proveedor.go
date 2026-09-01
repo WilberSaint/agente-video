@@ -19,6 +19,33 @@ import (
 type Plano struct {
 	Prompt   string `json:"prompt"`
 	Encuadre string `json:"encuadre"` // general | medio | cercano | detalle | cenital
+
+	// Sujeto identifica al personaje o lugar recurrente que aparece en este
+	// plano. Todos los planos que compartan sujeto se generan con la misma
+	// semilla, y eso mejora mucho que se vean como el mismo personaje: medido
+	// sobre un caso real, con semillas distintas el abrigo cambiaba de color y
+	// la cara salía deformada; con semilla compartida, no.
+	Sujeto string `json:"sujeto,omitempty"`
+}
+
+// SemillaDe devuelve la semilla que le toca a un plano. Los planos de un mismo
+// sujeto comparten semilla; el resto varía para no repetir composiciones.
+func (p Plano) SemillaDe(base int64, escena, indice int) int64 {
+	if s := strings.TrimSpace(strings.ToLower(p.Sujeto)); s != "" {
+		return base + int64(hashFNV(s)%100000)
+	}
+	return base + int64(escena*10+indice)
+}
+
+// hashFNV es FNV-1a de 32 bits: estable entre ejecuciones y entre máquinas, que
+// es lo único que se le pide. No se usa para nada criptográfico.
+func hashFNV(s string) uint32 {
+	var h uint32 = 2166136261
+	for i := 0; i < len(s); i++ {
+		h ^= uint32(s[i])
+		h *= 16777619
+	}
+	return h
 }
 
 type Escena struct {

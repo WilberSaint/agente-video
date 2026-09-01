@@ -178,12 +178,10 @@ func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
 			req := proveedor.PeticionImagen{
 				Prompt:   componerPrompt(p, plano.Prompt),
 				Negativo: p.Imagen.Negativo,
-				// Semilla distinta por plano: con la misma, dos prompts
-				// parecidos de la misma escena salen casi idénticos.
-				Semilla: p.Imagen.Semilla + int64(esc.N*10+j),
-				Ancho:   p.Formato.Ancho,
-				Alto:    p.Formato.Alto,
-				Destino: base,
+				Semilla:  plano.SemillaDe(p.Imagen.Semilla, esc.N, j),
+				Ancho:    p.Formato.Ancho,
+				Alto:     p.Formato.Alto,
+				Destino:  base,
 			}
 
 			var escrita string

@@ -107,7 +107,27 @@ repetir la descripción física de personajes, lugares, época e iluminación co
 las mismas palabras exactas en cada prompt donde aparezcan, en vez de escribir
 "the same man": el generador no sabe a quién se refiere.
 
-`imagen.personaje` en el perfil sirve para lo mismo a nivel de canal.
+Pero repetir la descripción **no basta**. Medido sobre un caso real, tres planos
+con el mismo texto de personaje y semillas distintas dieron un abrigo beige, uno
+verde oscuro y una cara deformada.
+
+Lo que sí funciona es **compartir la semilla**. Cada plano lleva un campo
+`sujeto` con un identificador corto y estable ("mujer", "farero"), y todos los
+planos que lo comparten se generan con la misma semilla. Repitiendo el mismo
+experimento con semilla compartida, los tres planos salieron con el mismo corte
+de pelo, el mismo abrigo beige y sin deformaciones.
+
+Dos apoyos más:
+
+- **Encuadre**: las caras se deforman cuando la persona ocupa poco de la imagen,
+  así que el guionista reserva el plano `general` para lugares y ambientes, y
+  usa `medio`/`cercano`/`detalle` cuando se ve una cara.
+- `imagen.personaje` en el perfil hace lo mismo a nivel de canal, para un
+  personaje fijo que aparece en todos los videos.
+
+Aun así no es infalible: los generadores libres no tienen bloqueo de identidad.
+Si el contenido no necesita personajes recurrentes, narrar sobre escenarios y
+atmósfera da un resultado más sólido.
 
 ## Por qué está diseñado así
 
