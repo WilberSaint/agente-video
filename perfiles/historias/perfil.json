@@ -1,0 +1,76 @@
+{
+  "id": "historias",
+  "nombre": "Cuervo — historias y relatos",
+  "idioma": "es",
+
+  "formato": { "ancho": 1080, "alto": 1920, "fps": 30 },
+
+  "guion": {
+    "tono": "narrador de relatos, íntimo y en segunda persona, como quien cuenta algo que le contaron a él; frases cortas, pausas cargadas",
+    "duracion_seg": 50,
+    "escenas": 7,
+    "instrucciones_extra": "Nunca reveles el desenlace antes de la última escena. Cierra con una pregunta que invite a comentar."
+  },
+
+  "imagen": {
+    "proveedor": "pollinations",
+    "modelo": "flux",
+    "estilo": "cinematic photography, moody volumetric lighting, 35mm film grain, desaturated teal and amber palette, shallow depth of field, no text",
+    "negativo": "text, watermark, logo, deformed hands, extra limbs, low quality",
+    "semilla": 3070,
+    "referencia": "",
+    "personaje": ""
+  },
+
+  "voz": {
+    "proveedor": "piper",
+    "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+    "velocidad": 0.96,
+    "expresividad": 0.95,
+    "variacion": 0.72,
+    "procesar": true,
+    "presencia": 3.5,
+    "limite_caracteres": 0,
+    "respaldo": "",
+    "modelo_respaldo": ""
+  },
+
+  "subtitulos": {
+    "activos": true,
+    "fuente": "Arial",
+    "tam_px": 76,
+    "color_primario": "&H00FFFFFF&",
+    "color_borde": "&H00000000&",
+    "grosor_borde": 5,
+    "margen_v": 300,
+    "animacion": "pop",
+    "palabras_por_linea": 4,
+    "color_activo": "&H0000E5FF&",
+    "escala_pop": 112
+  },
+
+  "personaje": {
+    "imagen": "personaje/",
+    "posicion": "abajo-derecha",
+    "alto_pct": 19,
+    "margen": 44,
+    "opacidad": 1,
+    "animacion": "hablar",
+    "forma": "circulo",
+    "color_croma": ""
+  },
+
+  "video": {
+    "proveedor": "kenburns",
+    "transicion": "fade",
+    "transicion_seg": 0.6,
+    "zoom": 1.18,
+    "musica": "../../assets/musica/musica-de-suspenso-260192.mp3",
+    "volumen_musica": 0.11,
+    "min_seg_por_imagen": 1.8,
+    "max_seg_por_imagen": 5.0,
+    "efecto_transicion": "../../assets/efectos/whoosh.wav",
+    "volumen_efectos": 0.28,
+    "efectos_en": "escena"
+  }
+}

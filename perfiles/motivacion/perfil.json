@@ -1,0 +1,76 @@
+{
+  "id": "motivacion",
+  "nombre": "Motivación — disciplina y fe",
+  "idioma": "es",
+
+  "formato": { "ancho": 1080, "alto": 1920, "fps": 30 },
+
+  "guion": {
+    "tono": "voz serena y firme, de hombre a hombre, sin gritar ni arengar. Habla de tú. Frases cortas y rotundas, con silencios. Nada de clichés vacíos: cada frase debe sostener un pensamiento propio",
+    "duracion_seg": 40,
+    "escenas": 6,
+    "instrucciones_extra": "Temas: disciplina, constancia, levantarse tras un tropiezo, paciencia, fe y sentido. Evita el lenguaje de gurú y las promesas fáciles. Reconoce que cuesta antes de decir que se puede. La última frase se queda con el espectador: una idea que pueda repetirse en voz baja, no un eslogan."
+  },
+
+  "imagen": {
+    "proveedor": "cloudflare",
+    "modelo": "",
+    "estilo": "cinematic photography, cold winter light, muted earth tones with warm amber highlights, atmospheric haze, film grain, quiet solitary mood, natural light, no text",
+    "negativo": "text, watermark, logo, deformed hands, crowds, cartoon, neon",
+    "semilla": 8800,
+    "referencia": "",
+    "personaje": ""
+  },
+
+  "voz": {
+    "proveedor": "piper",
+    "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+    "velocidad": 0.9,
+    "expresividad": 0.92,
+    "variacion": 0.7,
+    "procesar": true,
+    "presencia": 4.0,
+    "limite_caracteres": 0,
+    "respaldo": "",
+    "modelo_respaldo": ""
+  },
+
+  "subtitulos": {
+    "activos": true,
+    "fuente": "Arial",
+    "tam_px": 92,
+    "color_primario": "&H00FFFFFF&",
+    "color_borde": "&H00000000&",
+    "grosor_borde": 6,
+    "margen_v": 700,
+    "animacion": "palabra",
+    "palabras_por_linea": 3,
+    "color_activo": "&H0000E5FF&",
+    "escala_pop": 118
+  },
+
+  "personaje": {
+    "imagen": "",
+    "posicion": "abajo-derecha",
+    "alto_pct": 18,
+    "margen": 44,
+    "opacidad": 1,
+    "animacion": "hablar",
+    "forma": "circulo",
+    "color_croma": ""
+  },
+
+  "video": {
+    "proveedor": "kenburns",
+    "transicion": "fade",
+    "transicion_seg": 0.7,
+    "zoom": 1.14,
+    "musica": "../../assets/musica/u_epz2n8s2sa-gentle-reflections-322721.mp3",
+    "volumen_musica": 0.15,
+    "min_seg_por_imagen": 2.2,
+    "max_seg_por_imagen": 5.5,
+    "efecto_transicion": "../../assets/efectos/impacto.wav",
+    "volumen_efectos": 0.22,
+    "efectos_en": "escena"
+  }
+}

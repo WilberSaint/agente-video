@@ -1,0 +1,11 @@
+Expresiones del cuervo, recortadas de hoja-original.jfif con:
+
+    agente-video expresiones -hoja perfiles\historias\hoja-original.jfif ^
+                             -destino perfiles\historias\personaje
+
+Se reparten una por escena, en orden alfabético, volviendo a empezar cuando se
+acaban. Con 17 expresiones y 7 escenas, cada video usa las siete primeras: para
+variar entre videos, renombra o reordena.
+
+Si quieres controlar qué expresión toca a cada escena, renómbralas: el orden
+alfabético manda.

@@ -55,6 +55,8 @@ func main() {
 		err = cmdPerfiles(os.Args[2:])
 	case "servir":
 		err = cmdServir(ctx, os.Args[2:])
+	case "expresiones":
+		err = cmdExpresiones(os.Args[2:])
 	case "doctor":
 		err = cmdDoctor(ctx)
 	case "-h", "--help", "help", "ayuda":
@@ -78,6 +80,7 @@ func uso() {
   agente-video doctor                         revisa binarios y credenciales
   agente-video generar -perfil X -tema "..."  genera un video
   agente-video servir                         abre el panel web en el navegador
+  agente-video expresiones -hoja X -destino Y  parte una hoja de expresiones
 
 Opciones de "generar":
   -perfil    string  id del perfil (carpeta dentro de perfiles/)   [obligatorio]
