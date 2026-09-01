@@ -45,6 +45,14 @@ type Imagen struct {
 	Pasos    int     `json:"pasos,omitempty"`
 	CFG      float64 `json:"cfg,omitempty"`
 	Sampler  string  `json:"sampler,omitempty"`
+	// AnchoBase parte la generación en dos pasadas: una pequeña que cabe en la
+	// tarjeta y otra que amplía hasta el tamaño del formato añadiendo detalle.
+	// En 8 GB con SDXL, 768 es el punto donde deja de dar errores de memoria.
+	AnchoBase int `json:"ancho_base,omitempty"`
+	// AnchoTope limita lo que se le pide a la tarjeta aunque el video sea
+	// mayor. Con 6 GB, 1080 de ancho se queda sin memoria y 896 no.
+	AnchoTope int     `json:"ancho_tope,omitempty"`
+	Denoising float64 `json:"denoising,omitempty"`
 }
 
 type Voz struct {

@@ -27,18 +27,29 @@ import (
 // que la semilla se respeta, que es lo único que hace que un personaje se
 // parezca a sí mismo entre planos.
 type Local struct {
-	base    string
-	modelo  string
-	pasos   int
-	cfg     float64
-	sampler string
-	http    *http.Client
+	base      string
+	modelo    string
+	pasos     int
+	cfg       float64
+	sampler   string
+	anchoBase int
+	anchoTope int
+	denoising float64
+	http      *http.Client
 }
 
 // NuevoLocal apunta a la GPU. base es la dirección del servidor, por ejemplo
 // http://127.0.0.1:7860 en la misma máquina o http://192.168.1.50:7860 si la
 // GPU está en otro equipo de la red.
-func NuevoLocal(base, modelo, sampler string, pasos int, cfg float64) *Local {
+// anchoBase es el ancho de la primera pasada. Existe porque una tarjeta de 8 GB
+// no genera 1080x1920 de una vez con SDXL, pero sí genera 768x1344 y lo amplía
+// después con un segundo pase que añade detalle de verdad, no interpolación.
+// Con 0 se genera del tirón, que es lo correcto si sobra memoria.
+// anchoTope limita lo que se le pide a la tarjeta aunque el video sea mayor.
+// En 6 GB, generar a 1080x1920 se queda sin memoria; a 896 de ancho no. Sigue
+// siendo mucho mejor que los 576 de los servicios gratuitos, y ffmpeg amplía
+// lo que falte. Con 0 se pide el tamaño del formato.
+func NuevoLocal(base, modelo, sampler string, pasos, anchoBase, anchoTope int, cfg, denoising float64) *Local {
 	if base == "" {
 		base = "http://127.0.0.1:7860"
 	}
@@ -51,12 +62,21 @@ func NuevoLocal(base, modelo, sampler string, pasos int, cfg float64) *Local {
 	if sampler == "" {
 		sampler = "DPM++ 2M Karras"
 	}
+	if denoising <= 0 {
+		// Bajo a propósito: el segundo pase debe afinar la imagen que ya salió,
+		// no reinventarla. Por encima de 0.5 cambia la composición y se pierde
+		// la coherencia que daba la semilla.
+		denoising = 0.35
+	}
 	return &Local{
-		base:    strings.TrimRight(base, "/"),
-		modelo:  modelo,
-		pasos:   pasos,
-		cfg:     cfg,
-		sampler: sampler,
+		base:      strings.TrimRight(base, "/"),
+		modelo:    modelo,
+		pasos:     pasos,
+		cfg:       cfg,
+		sampler:   sampler,
+		anchoBase: anchoBase,
+		anchoTope: anchoTope,
+		denoising: denoising,
 		// Generoso: en una tarjeta modesta una imagen vertical grande puede
 		// pasar del minuto, y cortarla a medias desperdicia el trabajo hecho.
 		http: &http.Client{Timeout: 5 * time.Minute},
@@ -87,6 +107,15 @@ type peticionTxt2Img struct {
 	// Sin esto el modelo elegido se quedaría cargado y afectaría a quien use
 	// la interfaz web después.
 	RestaurarAjustes bool `json:"override_settings_restore_afterwards"`
+
+	// Segundo pase. La API espera el tamaño final en hr_resize_x/y, no un
+	// factor, que es lo que permite clavar la resolución que pide el perfil.
+	SegundoPase bool    `json:"enable_hr,omitempty"`
+	HRAncho     int     `json:"hr_resize_x,omitempty"`
+	HRAlto      int     `json:"hr_resize_y,omitempty"`
+	HRPasos     int     `json:"hr_second_pass_steps,omitempty"`
+	HREscalador string  `json:"hr_upscaler,omitempty"`
+	Denoising   float64 `json:"denoising_strength,omitempty"`
 }
 
 type respuestaTxt2Img struct {
@@ -95,16 +124,31 @@ type respuestaTxt2Img struct {
 }
 
 func (l *Local) Generar(ctx context.Context, req proveedor.PeticionImagen) (string, error) {
+	ancho, alto := req.Ancho, req.Alto
+	if l.anchoTope > 0 && ancho > l.anchoTope {
+		alto = parDeOcho(l.anchoTope * alto / ancho)
+		ancho = parDeOcho(l.anchoTope)
+	}
 	cuerpo := peticionTxt2Img{
 		Prompt:           req.Prompt,
 		PromptNegativo:   req.Negativo,
 		Semilla:          req.Semilla,
 		Pasos:            l.pasos,
 		CFG:              l.cfg,
-		Ancho:            req.Ancho,
-		Alto:             req.Alto,
+		Ancho:            ancho,
+		Alto:             alto,
 		Sampler:          l.sampler,
 		RestaurarAjustes: true,
+	}
+	// Primera pasada pequeña y segunda para llegar al tamaño pedido.
+	if l.anchoBase > 0 && l.anchoBase < ancho && ancho > 0 {
+		cuerpo.Ancho = parDeOcho(l.anchoBase)
+		cuerpo.Alto = parDeOcho(l.anchoBase * alto / ancho)
+		cuerpo.SegundoPase = true
+		cuerpo.HRAncho, cuerpo.HRAlto = ancho, alto
+		cuerpo.HRPasos = l.pasos / 2
+		cuerpo.HREscalador = "4x-UltraSharp"
+		cuerpo.Denoising = l.denoising
 	}
 	if l.modelo != "" {
 		cuerpo.Ajustes = map[string]any{"sd_model_checkpoint": l.modelo}
@@ -161,3 +205,13 @@ func (l *Local) Generar(ctx context.Context, req proveedor.PeticionImagen) (stri
 }
 
 var _ proveedor.Imagenero = (*Local)(nil)
+
+// parDeOcho redondea a múltiplo de 8: los modelos de difusión trabajan en el
+// espacio latente, que va a un octavo, y un tamaño que no cuadre se recorta
+// solo dejando una franja.
+func parDeOcho(n int) int {
+	if n < 8 {
+		return 8
+	}
+	return (n / 8) * 8
+}

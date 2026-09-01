@@ -1,6 +1,4 @@
-| `piper` | Aceptable, algo sintética | Tu CPU | Gratis, ilimitado |
-| **`kokoro`** | **Bastante mejor** | Tu CPU | **Gratis, ilimitado** |
-| `elevenlabs` | La mejor | Su nube | Por carácter |# agente-video
+# agente-video
 
 Genera videos verticales cortos (TikTok / Reels / Shorts) a partir de **un tema
 y un perfil**: guion, imágenes, narración, subtítulos y montaje, sin intervención
@@ -147,6 +145,10 @@ Piper por ElevenLabs, es escribir un tipo nuevo que cumpla la interfaz y agregar
 un `case` en `construirProveedores`. El pipeline no se entera.
 
 ---
+
+Para montarlo en un PC con tarjeta NVIDIA y generar las imágenes en local, ver
+[GPU.md](GPU.md): los servicios gratuitos ignoran la resolución que se les pide
+y ahí está el mayor salto de calidad pendiente.
 
 ## Instalación
 
@@ -585,11 +587,16 @@ escribe nueva en cada video. Un banco de audios solo serviría si el texto se
 repitiera, y entonces no habría agente.
 
 Un video de 45 s son unos 600 caracteres. El plan gratuito da 10.000 al mes
-(~16 videos) **sin derechos de uso comercial**; el de 5 USD da 30.000 (~50).
+(~12 videos) **sin derechos de uso comercial**; el de pago da 30.000. Medido
+sobre guiones reales del perfil `historias`, que promedian 789 caracteres, eso
+son **38 videos al mes**. El plan gratuito además **no deja usar por API las
+voces de la biblioteca** —solo las premade—, aunque desde su web sí: por eso
+existe `-voz-archivo`.
 
 | Proveedor | Calidad | Corre en | Costo |
 |---|---|---|---|
 | `piper` | Aceptable, algo sintética | Tu CPU | Gratis, ilimitado |
+| **`kokoro`** | **Bastante mejor** | Tu CPU | **Gratis, ilimitado** |
 | `elevenlabs` | La mejor | Su nube | Por carácter |
 
 El salto grande de calidad está en el modelo, no en el hardware: **Kokoro** corre

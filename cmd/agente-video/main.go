@@ -362,7 +362,8 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	switch p.Imagen.Proveedor {
 	case "local":
 		provs.Imagenero = imagen.NuevoLocal(p.Imagen.Servidor, p.Imagen.Modelo,
-			p.Imagen.Sampler, p.Imagen.Pasos, p.Imagen.CFG)
+			p.Imagen.Sampler, p.Imagen.Pasos, p.Imagen.AnchoBase, p.Imagen.AnchoTope,
+			p.Imagen.CFG, p.Imagen.Denoising)
 	case "cloudflare":
 		provs.Imagenero = imagen.NuevoCloudflare(
 			os.Getenv("CF_ACCOUNT_ID"), os.Getenv("CF_API_TOKEN"), p.Imagen.Modelo)

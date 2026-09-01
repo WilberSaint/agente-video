@@ -56,6 +56,8 @@ de temáticas: canal, estilo, voz, formato y personaje viven ahí.
   casi 3x. El proveedor `local` (GPU propia) existe por esto.
 - **Pollinations admite una petición por IP a la vez.** Dos videos en paralelo
   se tumban con 429.
+- Para montarlo sobre una GPU propia está **[GPU.md](../../../GPU.md)**, con los
+  números ya calculados para 6 GB de VRAM.
 - **Cloudflare no respeta la semilla**, así que no mantiene personajes.
   `SoportaSemilla()` lo declara y el pipeline avisa.
 
