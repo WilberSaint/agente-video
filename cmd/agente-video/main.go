@@ -95,6 +95,7 @@ Opciones de "generar":
   -voz       string  "proveedor:modelo" o solo el modelo (sobrescribe el perfil)
   -simular           guion fijo, sin llamar a la API. Para probar sin gastar créditos
   -guion     string  usa el guion de este .json en lugar de generarlo
+  -voz-archivo string  usa este audio ya narrado (mp3/wav) en vez de sintetizar
 
 Variables de entorno:
   ANTHROPIC_API_KEY   llave para el guionista. Alternativas: ANTHROPIC_AUTH_TOKEN,
@@ -125,6 +126,7 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	vozOverride := fs.String("voz", "", "sobrescribe la voz: \"proveedor:modelo\" o solo el modelo")
 	simular := fs.Bool("simular", false, "usa un guion fijo, sin llamar a la API ni gastar créditos")
 	guionArchivo := fs.String("guion", "", "usa el guion de este archivo .json en vez de generarlo")
+	vozArchivo := fs.String("voz-archivo", "", "usa este audio ya narrado en vez de sintetizar")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -187,10 +189,11 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	}
 
 	pl := pipeline.Nuevo(provs, pipeline.Opciones{
-		DirTrabajo: *dirTrabajos,
-		DirSalida:  *dirSalida,
-		Reintentos: *reintentos,
-		Registro:   registro,
+		DirTrabajo:    *dirTrabajos,
+		DirSalida:     *dirSalida,
+		Reintentos:    *reintentos,
+		Registro:      registro,
+		VozPregrabada: *vozArchivo,
 	})
 
 	res, err := pl.Ejecutar(ctx, p, *tema, *idTrabajo)

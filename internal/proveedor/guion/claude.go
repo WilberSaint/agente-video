@@ -93,6 +93,11 @@ TEXTO DE PUBLICACIÓN
   promesa o una tensión. Nada de títulos genéricos tipo "Reflexión del día".
 - La descripción acompaña al video en la publicación. No repitas el título
   palabra por palabra.
+- La PRIMERA frase de la narración tiene el mismo problema y la misma regla:
+  debe entrar por un detalle de esta historia, no por una fórmula de arranque.
+  Prohibido abrir con "te lo cuento como me lo contaron", "te lo contaron así",
+  "esto pasó de verdad", "nadie sabe por qué" o cualquier variante. Empieza por
+  el hecho concreto: el objeto, la hora, la frase que alguien dijo.
 - El cierre de la descripción tiene que salir de ESTE video en concreto: un
   detalle suyo, una pregunta que solo tenga sentido sabiendo lo que se cuenta,
   un dato que se quedó fuera. Prohibido rematar con fórmulas intercambiables

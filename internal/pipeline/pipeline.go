@@ -18,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"agente-video/internal/herramientas"
 	"agente-video/internal/perfil"
 	"agente-video/internal/proveedor"
 )
@@ -78,6 +79,12 @@ type Opciones struct {
 	// son noches enteras sin producir y sin que nadie se entere. Vale más un
 	// video fallido que una cola parada.
 	PlazoMaximo time.Duration
+
+	// VozPregrabada es un audio ya narrado que sustituye a la síntesis. Existe
+	// porque el plan gratuito de ElevenLabs no deja usar por API las voces de
+	// la biblioteca, pero sí desde su web: así se pueden usar igualmente,
+	// generándolas a mano y pasándoselas al agente.
+	VozPregrabada string
 }
 
 type Pipeline struct {
@@ -324,6 +331,11 @@ func (pl *Pipeline) etapaVoz(ctx context.Context, p *perfil.Perfil, g *proveedor
 		pl.opt.Registro("[3/5] narración reutilizada del checkpoint")
 		return nil
 	}
+	if pl.opt.VozPregrabada != "" {
+		pl.avanzar(3, "voz", 0, 1, "usando la narración pregrabada")
+		pl.opt.Registro("[3/5] narración pregrabada: %s", pl.opt.VozPregrabada)
+		return pl.convertirVoz(ctx, pl.opt.VozPregrabada, ruta)
+	}
 	pl.avanzar(3, "voz", 0, 1, "sintetizando la narración")
 	pl.opt.Registro("[3/5] sintetizando narración con %s…", pl.prov.Locutor.Nombre())
 	return pl.prov.Locutor.Sintetizar(ctx, proveedor.PeticionVoz{
@@ -332,6 +344,23 @@ func (pl *Pipeline) etapaVoz(ctx context.Context, p *perfil.Perfil, g *proveedor
 		Destino: ruta,
 		Voz:     p.Voz,
 	})
+}
+
+// convertirVoz deja un audio de fuera en el formato que espera el resto del
+// pipeline. Se normaliza a -16 LUFS igual que la voz sintetizada: si no, un
+// video con audio traído de fuera sonaría más alto o más bajo que los demás.
+func (pl *Pipeline) convertirVoz(ctx context.Context, origen, destino string) error {
+	if _, err := os.Stat(origen); err != nil {
+		return fmt.Errorf("no se encontró el audio %s: %w", origen, err)
+	}
+	_, err := herramientas.Correr(ctx, "ffmpeg", "-y", "-loglevel", "error",
+		"-i", origen,
+		"-af", "loudnorm=I=-16:TP=-1.5:LRA=11",
+		"-ar", "22050", "-ac", "1", "-c:a", "pcm_s16le", destino)
+	if err != nil {
+		return fmt.Errorf("convirtiendo %s: %w", origen, err)
+	}
+	return nil
 }
 
 func (pl *Pipeline) etapaSubtitulos(ctx context.Context, p *perfil.Perfil, audio, ruta string) error {

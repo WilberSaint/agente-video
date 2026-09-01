@@ -25,3 +25,6 @@
 # Muestras de audio: se regeneran con un comando y pesan megas.
 muestras-voz/**/*.mp3
 muestras-voz/**/*.wav
+
+# Guiones sueltos para narrar fuera; se regeneran con probar-guion.
+/guiones/
