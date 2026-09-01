@@ -15,3 +15,9 @@
 
 # Música y efectos: binarios pesados, con licencias propias
 /assets/
+
+# Dependencias y build de la interfaz. dist/ se empotra en el binario al
+# compilar, así que no tiene sentido versionarlo.
+/interfaz/node_modules/
+/interfaz/dist/*
+!/interfaz/dist/mantener.txt

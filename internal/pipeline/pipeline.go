@@ -28,11 +28,47 @@ type Proveedores struct {
 	Videasta     proveedor.Videasta
 }
 
+// Avance describe en qué punto va el trabajo. Existe aparte del registro de
+// texto porque una interfaz necesita una fracción con la que dibujar una barra,
+// y sacarla parseando líneas de log es frágil: cambiar un mensaje rompería la
+// UI sin que nada avise.
+type Avance struct {
+	Etapa    int    `json:"etapa"` // 1..5
+	Etiqueta string `json:"etiqueta"`
+	Hecho    int    `json:"hecho"`
+	Total    int    `json:"total"`
+	Detalle  string `json:"detalle"`
+}
+
+// Fraccion es cuánto del trabajo total está hecho, de 0 a 1. Las etapas no
+// duran lo mismo —las imágenes se llevan la mayor parte— así que se ponderan
+// según lo medido, en vez de repartir 20% a cada una.
+func (a Avance) Fraccion() float64 {
+	pesos := [6]float64{0, 0.05, 0.70, 0.03, 0.05, 0.17} // índice = etapa
+	var base float64
+	for i := 1; i < a.Etapa && i < len(pesos); i++ {
+		base += pesos[i]
+	}
+	dentro := 0.0
+	if a.Total > 0 {
+		dentro = float64(a.Hecho) / float64(a.Total)
+	}
+	if a.Etapa >= 1 && a.Etapa < len(pesos) {
+		base += pesos[a.Etapa] * dentro
+	}
+	if base > 1 {
+		return 1
+	}
+	return base
+}
+
 type Opciones struct {
 	DirTrabajo string
 	DirSalida  string
 	Reintentos int
 	Registro   func(formato string, args ...any)
+	// Avance es opcional; solo lo usa el servidor.
+	Avance func(Avance)
 }
 
 type Pipeline struct {
@@ -137,6 +173,7 @@ func (pl *Pipeline) etapaGuion(ctx context.Context, p *perfil.Perfil, tema, ruta
 			return &g, nil
 		}
 	}
+	pl.avanzar(1, "guion", 0, 1, "escribiendo el guion")
 	pl.opt.Registro("[1/5] escribiendo guion con %s…", pl.prov.Guionista.Nombre())
 	g, err := pl.prov.Guionista.Generar(ctx, p, tema)
 	if err != nil {
@@ -187,6 +224,7 @@ func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
 			var escrita string
 			var err error
 			for intento := 1; intento <= pl.opt.Reintentos; intento++ {
+				pl.avanzar(2, "imágenes", hechas-1, total, fmt.Sprintf("imagen %d de %d", hechas, total))
 				pl.opt.Registro("[2/5] imagen %d/%d (escena %d, %s) con %s (intento %d)…",
 					hechas, total, esc.N, encuadreONada(plano.Encuadre),
 					pl.prov.Imagenero.Nombre(), intento)
@@ -233,6 +271,7 @@ func (pl *Pipeline) etapaVoz(ctx context.Context, p *perfil.Perfil, g *proveedor
 		pl.opt.Registro("[3/5] narración reutilizada del checkpoint")
 		return nil
 	}
+	pl.avanzar(3, "voz", 0, 1, "sintetizando la narración")
 	pl.opt.Registro("[3/5] sintetizando narración con %s…", pl.prov.Locutor.Nombre())
 	return pl.prov.Locutor.Sintetizar(ctx, proveedor.PeticionVoz{
 		Texto:     g.NarracionCompleta(),
@@ -247,6 +286,7 @@ func (pl *Pipeline) etapaSubtitulos(ctx context.Context, p *perfil.Perfil, audio
 		pl.opt.Registro("[4/5] subtítulos reutilizados del checkpoint")
 		return nil
 	}
+	pl.avanzar(4, "subtítulos", 0, 1, "transcribiendo")
 	pl.opt.Registro("[4/5] transcribiendo con %s…", pl.prov.Subtitulador.Nombre())
 	return pl.prov.Subtitulador.Generar(ctx, proveedor.PeticionSubtitulos{
 		Audio:      audio,
@@ -262,6 +302,7 @@ func (pl *Pipeline) etapaVideo(ctx context.Context, p *perfil.Perfil,
 		pl.opt.Registro("[5/5] video ya ensamblado, se salta")
 		return nil
 	}
+	pl.avanzar(5, "montaje", 0, 1, "ensamblando el video")
 	pl.opt.Registro("[5/5] ensamblando con %s (esta etapa es la lenta)…", pl.prov.Videasta.Nombre())
 	return pl.prov.Videasta.Ensamblar(ctx, proveedor.PeticionVideo{
 		Perfil:    p,
@@ -343,4 +384,12 @@ func copiar(origen, destino string) error {
 	defer s.Close()
 	_, err = io.Copy(s, e)
 	return err
+}
+
+// avanzar notifica el progreso si alguien está escuchando.
+func (pl *Pipeline) avanzar(etapa int, etiqueta string, hecho, total int, detalle string) {
+	if pl.opt.Avance == nil {
+		return
+	}
+	pl.opt.Avance(Avance{Etapa: etapa, Etiqueta: etiqueta, Hecho: hecho, Total: total, Detalle: detalle})
 }

@@ -209,7 +209,66 @@ haciendo falta una llave. Donde sí paga es al mover la generación a CI.
 
 ---
 
-## Uso
+## El panel
+
+```powershell
+.\agente-video.exe servir
+# panel en http://127.0.0.1:8787
+```
+
+Eliges perfil, escribes **un tema por línea** y pulsa Generar. Los trabajos se
+encolan y se procesan **de uno en uno**, con la barra de progreso actualizándose
+en vivo. Al terminar, el video se reproduce en la misma página.
+
+Escribir cinco temas y encolarlos de golpe es la diferencia entre lanzar un
+video y dejar la máquina trabajando toda la noche.
+
+| Opción | |
+|---|---|
+| `-puerto 8787` | puerto donde escuchar |
+| `-direccion 0.0.0.0` | abrirlo a la red local (por defecto solo esta máquina) |
+
+**No hay autenticación.** Por eso escucha solo en `127.0.0.1` salvo que lo
+cambies a mano: cualquiera con acceso a ese puerto puede gastar tu saldo de API.
+Si lo abres a la red, ponlo detrás de algo que pida credenciales.
+
+### Cómo está montado
+
+- **Vue 3 + Vite** en `interfaz/`, compilado a `dist/` y **empotrado en el
+  binario** con `go:embed`. Desplegar sigue siendo copiar un `.exe`: no hay
+  carpeta que sincronizar ni forma de que la interfaz y la API se desfasen.
+- **Un solo obrero** procesa la cola. Es deliberado: el montaje satura los
+  cuatro núcleos, así que dos videos a la vez no van al doble de velocidad, van
+  los dos a la mitad.
+- **SSE** para el progreso, no WebSocket: el flujo va en un solo sentido y
+  `EventSource` reconecta solo, sin código de reconexión en el cliente.
+- **La cola se persiste.** Si el servidor se cae a media generación, al volver
+  el trabajo se reencola en lugar de quedar mintiendo en "corriendo".
+- El progreso viaja **estructurado**, no parseando líneas de log: cambiar un
+  mensaje no debe romper la barra sin que nada avise.
+
+### Desarrollar la interfaz
+
+```powershell
+cd interfaz
+npm install
+npm run dev     # http://localhost:5173, con recarga en caliente
+```
+
+Vite redirige `/api` y `/media` al servidor Go en el 8787, así que se desarrolla
+contra datos reales. Para incorporar los cambios al binario:
+
+```powershell
+npm run build
+cd ..
+go build -o agente-video.exe .\cmd\agente-video
+```
+
+---
+
+## Uso por terminal
+
+El panel no sustituye a la línea de comandos; ambos usan el mismo pipeline.
 
 ```powershell
 .\agente-video.exe perfiles

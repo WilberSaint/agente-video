@@ -1,0 +1,6 @@
+Este archivo existe para que interfaz/dist/ nunca esté vacío.
+
+go:embed falla en tiempo de compilación si su patrón no encuentra ningún
+archivo, así que sin esto el binario no compilaría hasta que alguien hubiera
+corrido "npm run build". Vite copia el contenido de public/ a dist/ en cada
+compilación, de modo que el marcador sobrevive a emptyOutDir.

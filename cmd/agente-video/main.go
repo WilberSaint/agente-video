@@ -44,6 +44,8 @@ func main() {
 		err = cmdGenerar(ctx, os.Args[2:])
 	case "perfiles":
 		err = cmdPerfiles(os.Args[2:])
+	case "servir":
+		err = cmdServir(ctx, os.Args[2:])
 	case "doctor":
 		err = cmdDoctor(ctx)
 	case "-h", "--help", "help", "ayuda":
@@ -66,6 +68,7 @@ func uso() {
   agente-video perfiles                       lista los perfiles disponibles
   agente-video doctor                         revisa binarios y credenciales
   agente-video generar -perfil X -tema "..."  genera un video
+  agente-video servir                         abre el panel web en el navegador
 
 Opciones de "generar":
   -perfil    string  id del perfil (carpeta dentro de perfiles/)   [obligatorio]
@@ -329,3 +332,5 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	var _ proveedor.Guionista = provs.Guionista
 	return provs, nil
 }
+
+func flagSet(nombre string) *flag.FlagSet { return flag.NewFlagSet(nombre, flag.ExitOnError) }
