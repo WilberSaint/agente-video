@@ -147,7 +147,7 @@ func perfilDePrueba(animacion string) *perfil.Perfil {
 // los márgenes en píxeles empujan el texto fuera del cuadro sin ningún error.
 func TestGenerarASSUsaLaResolucionDelVideo(t *testing.T) {
 	destino := filepath.Join(t.TempDir(), "out.ass")
-	if err := generarASS(escribirTemp(t, srtDePrueba), destino, perfilDePrueba("pop"), "Arial"); err != nil {
+	if err := generarASS(escribirTemp(t, srtDePrueba), destino, perfilDePrueba("pop"), "Arial", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	datos, err := os.ReadFile(destino)
@@ -179,7 +179,7 @@ func TestGenerarASSPorModo(t *testing.T) {
 		t.Run(c.animacion, func(t *testing.T) {
 			destino := filepath.Join(t.TempDir(), "out.ass")
 			err := generarASS(escribirTemp(t, srtDePrueba), destino,
-				perfilDePrueba(c.animacion), "Arial")
+				perfilDePrueba(c.animacion), "Arial", "", nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -207,7 +207,7 @@ func TestEscaparASSNeutralizaLlaves(t *testing.T) {
 
 func TestGenerarASSFallaConSRTVacio(t *testing.T) {
 	destino := filepath.Join(t.TempDir(), "out.ass")
-	err := generarASS(escribirTemp(t, "\n"), destino, perfilDePrueba("pop"), "Arial")
+	err := generarASS(escribirTemp(t, "\n"), destino, perfilDePrueba("pop"), "Arial", "", nil)
 	if err == nil {
 		t.Fatal("esperaba error con un SRT sin subtítulos")
 	}
@@ -305,7 +305,7 @@ func TestElASSNoMuestraArticulosSolos(t *testing.T) {
  todo
 `
 	destino := filepath.Join(t.TempDir(), "out.ass")
-	if err := generarASS(escribirTemp(t, srt), destino, perfilDePrueba("palabra"), "Arial"); err != nil {
+	if err := generarASS(escribirTemp(t, srt), destino, perfilDePrueba("palabra"), "Arial", "", nil); err != nil {
 		t.Fatal(err)
 	}
 	datos, _ := os.ReadFile(destino)

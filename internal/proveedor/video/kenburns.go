@@ -183,7 +183,8 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 
 			// Generamos el ASS con la resolución real del video (ver ass.go).
 			rutaASS := strings.TrimSuffix(req.SRT, filepath.Ext(req.SRT)) + ".ass"
-			if err := generarASS(req.SRT, rutaASS, &conMargen, fuente); err != nil {
+			if err := generarASS(req.SRT, rutaASS, &conMargen, fuente,
+				narracionDe(req.Escenas), k.avisar); err != nil {
 				return fmt.Errorf("preparando subtítulos: %w", err)
 			}
 			filtros = append(filtros, fmt.Sprintf("[%s]ass='%s'[vout]",

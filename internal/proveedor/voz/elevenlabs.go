@@ -113,6 +113,16 @@ func (e *ElevenLabs) Sintetizar(ctx context.Context, req proveedor.PeticionVoz) 
 			return proveedor.Permanente(fmt.Errorf("%w\n\nSuele ser un id de voz "+
 				"que no existe en tu cuenta", err))
 		}
+		if respuesta.StatusCode == http.StatusPaymentRequired {
+			return proveedor.Permanente(fmt.Errorf("%w\n\nEl plan gratuito no deja usar "+
+				"voces de la biblioteca por API; solo las premade de tu cuenta", err))
+		}
+		// Cualquier otro 4xx tampoco cambia reintentando: la petición es la que
+		// no vale. Marcarlo permite al respaldo entrar en vez de tumbar el video.
+		if respuesta.StatusCode >= 400 && respuesta.StatusCode < 500 &&
+			respuesta.StatusCode != http.StatusTooManyRequests {
+			return proveedor.Permanente(err)
+		}
 		return err
 	}
 

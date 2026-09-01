@@ -21,3 +21,7 @@
 /interfaz/node_modules/
 /interfaz/dist/*
 !/interfaz/dist/mantener.txt
+
+# Muestras de audio: se regeneran con un comando y pesan megas.
+muestras-voz/**/*.mp3
+muestras-voz/**/*.wav

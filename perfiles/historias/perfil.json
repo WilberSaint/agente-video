@@ -51,7 +51,7 @@
 
   "personaje": {
     "imagen": "personaje/",
-    "posicion": "abajo-derecha",
+    "posicion": "abajo-izquierda",
     "alto_pct": 19,
     "margen": 44,
     "opacidad": 1,

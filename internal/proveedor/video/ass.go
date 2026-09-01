@@ -49,13 +49,31 @@ func (g grupo) texto() string {
 
 // generarASS convierte el SRT palabra-por-palabra de whisper en un ASS
 // con el estilo y la animación que pide el perfil.
-func generarASS(rutaSRT, destino string, p *perfil.Perfil, fuente string) error {
+// narracion es el texto que se mandó a sintetizar. Si viene, manda sobre lo
+// que oyó whisper; si viene vacío, se usa la transcripción tal cual.
+func generarASS(rutaSRT, destino string, p *perfil.Perfil, fuente, narracion string, aviso func(string, ...any)) error {
 	palabras, err := leerSRT(rutaSRT)
 	if err != nil {
 		return err
 	}
 	if len(palabras) == 0 {
 		return fmt.Errorf("%s no contiene subtítulos", rutaSRT)
+	}
+	if narracion != "" {
+		corregidas, cambios, fiable := corregirConGuion(palabras, narracion)
+		switch {
+		case !fiable:
+			if aviso != nil {
+				aviso("la transcripción no cuadra con el guion; se usan los subtítulos tal cual")
+			}
+		case cambios > 0:
+			palabras = corregidas
+			if aviso != nil {
+				aviso("%d palabra(s) de los subtítulos corregidas con el guion", cambios)
+			}
+		default:
+			palabras = corregidas
+		}
 	}
 
 	s := p.Subtitulos

@@ -1,0 +1,89 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Voces de ElevenLabs — plan gratuito</title>
+<style>
+  body { font: 15px/1.55 system-ui, sans-serif; max-width: 720px; margin: 40px auto;
+         padding: 0 20px 80px; color: #1c1b1a; background: #faf9f7; }
+  h1 { font-size: 21px; letter-spacing: -.02em; margin-bottom: 4px; }
+  .sub { color: #6b6862; margin-top: 0; }
+  .aviso { background: #fff6e5; border: 1px solid #e8d5a8; border-radius: 8px;
+           padding: 12px 15px; margin: 22px 0; }
+  .frase { font-style: italic; color: #6b6862; border-left: 3px solid #ddd;
+           padding-left: 12px; margin: 22px 0; }
+  .voz { border: 1px solid #e3e0da; border-radius: 10px; padding: 13px 15px;
+         margin-bottom: 11px; background: #fff; }
+  .voz.actual { background: #f2f4f8; }
+  .cab { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .nombre { font-weight: 650; }
+  .etiqueta { font-size: 12.5px; color: #6b6862; }
+  audio { width: 100%; margin-top: 9px; }
+  code { background: #f0eeea; padding: 1px 5px; border-radius: 4px; font-size: 13px; }
+</style>
+
+<h1>Voces de ElevenLabs</h1>
+<p class="sub">Las que el plan gratuito permite usar por API.</p>
+
+<div class="aviso">
+  <strong>Lo que hay que decidir aquí:</strong> todas estas voces son de locutores
+  angloparlantes. Hablan español con el modelo multilingüe, pero con acento inglés
+  en mayor o menor grado. Las tres que elegiste —Elder, God y David Martin— son
+  nativas en español, pero son de la biblioteca de la comunidad y el plan gratuito
+  no las deja usar por API.
+  <br><br>
+  Escucha y decide: si el acento te sirve, seguimos gratis. Si no, hace falta el
+  plan de pago para las tuyas.
+</div>
+
+<p class="frase">
+  «Nadie supo que su hija seguía allí. La casa costaba la mitad, y la condición
+  era el sótano.»
+</p>
+
+<div class="voz actual">
+  <div class="cab">
+    <span class="nombre">Piper — la que tienes ahora</span>
+    <span class="etiqueta">gratis, local, sin límite · es_MX-claude-high</span>
+  </div>
+  <audio controls preload="none" src="_piper-actual.wav"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">George</span>
+    <span class="etiqueta">británico · narrador cálido · <code>JBFqnCBsd6RMkjVDRZzb</code></span></div>
+  <audio controls preload="none" src="George.mp3"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">Brian</span>
+    <span class="etiqueta">americano · grave y envolvente · <code>nPczCjzI2devNBz1zQrb</code></span></div>
+  <audio controls preload="none" src="Brian.mp3"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">Bill</span>
+    <span class="etiqueta">americano · mayor, sereno · <code>pqHfZKP75CvOlQylNhV4</code></span></div>
+  <audio controls preload="none" src="Bill.mp3"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">Callum</span>
+    <span class="etiqueta">americano · ronco, inquietante · <code>N2lVS1w4EtoT3dr4eOWO</code></span></div>
+  <audio controls preload="none" src="Callum.mp3"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">Daniel</span>
+    <span class="etiqueta">británico · locutor formal · <code>onwK4e9ZLuTAKqWW03F9</code></span></div>
+  <audio controls preload="none" src="Daniel.mp3"></audio>
+</div>
+
+<div class="voz">
+  <div class="cab"><span class="nombre">Roger</span>
+    <span class="etiqueta">americano · relajado, resonante · <code>CwhRBWXzGAHq8TQ4Fs17</code></span></div>
+  <audio controls preload="none" src="Roger.mp3"></audio>
+</div>
+
+<p class="sub" style="margin-top:26px">
+  Para probar una en un video completo:<br>
+  <code>.\agente-video.exe generar -perfil historias -tema "…" -voz "elevenlabs:EL_ID"</code>
+</p>

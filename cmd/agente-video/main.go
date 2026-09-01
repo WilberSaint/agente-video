@@ -92,6 +92,7 @@ Opciones de "generar":
   -bin       string  carpeta de binarios externos  (por defecto "bin")
   -reintentos int    reintentos por imagen         (por defecto 3)
   -animacion string  ninguna | pop | karaoke | palabra  (sobrescribe el perfil)
+  -voz       string  "proveedor:modelo" o solo el modelo (sobrescribe el perfil)
   -simular           guion fijo, sin llamar a la API. Para probar sin gastar créditos
   -guion     string  usa el guion de este .json en lugar de generarlo
 
@@ -121,6 +122,7 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	dirBin := fs.String("bin", "bin", "carpeta de binarios")
 	reintentos := fs.Int("reintentos", 3, "reintentos por imagen")
 	animacion := fs.String("animacion", "", "sobrescribe subtitulos.animacion del perfil")
+	vozOverride := fs.String("voz", "", "sobrescribe la voz: \"proveedor:modelo\" o solo el modelo")
 	simular := fs.Bool("simular", false, "usa un guion fijo, sin llamar a la API ni gastar créditos")
 	guionArchivo := fs.String("guion", "", "usa el guion de este archivo .json en vez de generarlo")
 	if err := fs.Parse(args); err != nil {
@@ -141,6 +143,19 @@ func cmdGenerar(ctx context.Context, args []string) error {
 	// re-renderizar en segundos reutilizando el resto de checkpoints.
 	if *animacion != "" {
 		p.Subtitulos.Animacion = *animacion
+		if err := p.Validar(); err != nil {
+			return err
+		}
+	}
+
+	// Override para comparar voces sin duplicar perfiles. Comparar es el caso
+	// real: la voz no se elige leyendo una ficha, se elige oyendo tres.
+	if *vozOverride != "" {
+		if prov, modelo, hayDosPartes := strings.Cut(*vozOverride, ":"); hayDosPartes {
+			p.Voz.Proveedor, p.Voz.Modelo = prov, modelo
+		} else {
+			p.Voz.Modelo = *vozOverride
+		}
 		if err := p.Validar(); err != nil {
 			return err
 		}
