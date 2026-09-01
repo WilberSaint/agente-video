@@ -27,6 +27,7 @@
   .par .destacado{color:var(--ok);font-weight:600}
   audio{width:100%;height:36px}
   .actual{border-color:var(--acento)}
+  .destacada{border-color:var(--ok);border-width:2px}
   .chip{display:inline-block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;
         padding:2px 8px;border-radius:999px;border:1px solid var(--acento);
         color:var(--acento);margin-left:8px;vertical-align:2px}
@@ -38,12 +39,32 @@
 <body><div class="env">
 
 <h1>Comparar voces</h1>
-<p class="intro">Mismo texto en las cuatro voces disponibles, cruda y procesada.
+<p class="intro">Mismo texto en todas las voces instaladas. Kokoro va primero: es la mejor, y también gratis y local.
 Escucha con auriculares: la diferencia está en la presencia y en la dinámica,
 y en altavoces de portátil casi no se aprecia.</p>
 
 <blockquote>Hay un faro en la costa norte que sigue encendido. Nadie lo atiende
 desde hace cuarenta años. El último farero salió una mañana de marzo y jamás volvió.</blockquote>
+
+<div class="voz destacada">
+  <h2>Kokoro — em_alex <span class="chip">gratis, local, mejor calidad</span></h2>
+  <p class="meta">Español masculino &middot; corre en tu CPU &middot; sin cuota</p>
+  <div class="par"><span class="destacado">Kokoro</span><audio controls preload="none" src="kokoro-em_alex.mp3"></audio></div>
+</div>
+
+<div class="voz destacada">
+  <h2>Kokoro — em_santa</h2>
+  <p class="meta">Español masculino, otro timbre</p>
+  <div class="par"><span class="destacado">Kokoro</span><audio controls preload="none" src="kokoro-em_santa.mp3"></audio></div>
+</div>
+
+<div class="voz destacada">
+  <h2>Kokoro — ef_dora</h2>
+  <p class="meta">Español femenino</p>
+  <div class="par"><span class="destacado">Kokoro</span><audio controls preload="none" src="kokoro-ef_dora.mp3"></audio></div>
+</div>
+
+<h1 style="font-size:19px;margin:38px 0 14px">Piper — lo que teníamos</h1>
 
 <div class="voz actual">
   <h2>es_MX-claude-high <span class="chip">la que usas ahora</span></h2>
@@ -90,8 +111,18 @@ desde hace cuarenta años. El último farero salió una mañana de marzo y jamá
   "presencia": 3.5
 }</code></pre>
 
-  <p>Si ninguna te convence, el siguiente escalón es <strong>Kokoro</strong>:
-  bastante mejor, también gratis y en CPU, pero necesita Python instalado.</p>
+  <p><strong>Para usar Kokoro</strong>, que ya está instalado:</p>
+  <pre><code>"voz": {
+  "proveedor": "kokoro",
+  "modelo": "em_alex",
+  "velocidad": 1.0,
+  "procesar": true
+}</code></pre>
+
+  <p>Voces disponibles: <code>em_alex</code> y <code>em_santa</code> (masculinas),
+  <code>ef_dora</code> (femenina). Tarda unas dos veces el tiempo real frente a
+  las diez de Piper, pero en un video de varios minutos veinte segundos más de
+  síntesis no cambian nada.</p>
 </div>
 
 </div></body></html>

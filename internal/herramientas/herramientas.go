@@ -23,6 +23,19 @@ func Buscar(nombre string) (string, error) {
 	if runtime.GOOS == "windows" && !strings.HasSuffix(nombre, ".exe") {
 		nombre += ".exe"
 	}
+	// Una ruta ya es una ruta: anteponerle DirBin daría bin/bin/... Se admite
+	// para que un proveedor pueda apuntar a un intérprete concreto, como el
+	// Python autocontenido, en vez de a un binario suelto de bin/.
+	if strings.ContainsAny(nombre, `/\`) {
+		if info, err := os.Stat(nombre); err == nil && !info.IsDir() {
+			if abs, err := filepath.Abs(nombre); err == nil {
+				return abs, nil
+			}
+			return nombre, nil
+		}
+		return "", fmt.Errorf("no se encontró %q", nombre)
+	}
+
 	local := filepath.Join(DirBin, nombre)
 	if info, err := os.Stat(local); err == nil && !info.IsDir() {
 		abs, err := filepath.Abs(local)

@@ -340,6 +340,8 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	switch p.Voz.Proveedor {
 	case "piper", "":
 		provs.Locutor = voz.NuevoPiper()
+	case "kokoro":
+		provs.Locutor = voz.NuevoKokoro("", "", "", "")
 	case "elevenlabs":
 		// El id de la voz va en voz.modelo, igual que la ruta del .onnx en
 		// Piper: para el perfil es "qué voz", y cada proveedor lo interpreta.

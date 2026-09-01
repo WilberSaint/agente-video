@@ -23,8 +23,8 @@
     "personaje": ""
   },
   "voz": {
-    "proveedor": "piper",
-    "modelo": "../../bin/voces/es_MX-claude-high.onnx",
+    "proveedor": "kokoro",
+    "modelo": "em_alex",
     "velocidad": 0.9,
     "expresividad": 0.92,
     "variacion": 0.7,

@@ -1,4 +1,6 @@
-# agente-video
+| `piper` | Aceptable, algo sintética | Tu CPU | Gratis, ilimitado |
+| **`kokoro`** | **Bastante mejor** | Tu CPU | **Gratis, ilimitado** |
+| `elevenlabs` | La mejor | Su nube | Por carácter |# agente-video
 
 Genera videos verticales cortos (TikTok / Reels / Shorts) a partir de **un tema
 y un perfil**: guion, imágenes, narración, subtítulos y montaje, sin intervención
@@ -562,3 +564,25 @@ Un video de 45 s son unos 600 caracteres. El plan gratuito da 10.000 al mes
 El salto grande de calidad está en el modelo, no en el hardware: **Kokoro** corre
 también en CPU y suena bastante mejor que Piper. Pide Python instalado, que es la
 razón por la que no se incluyó de entrada.
+
+### Kokoro — la voz local de mejor calidad
+
+Gratis, ilimitada y en CPU, con una entonación bastante más natural que Piper.
+Necesita Python, que es la razón por la que no viene de entrada.
+
+```powershell
+.\instalar-python.ps1     # Python autocontenido en bin\python, sin tocar el sistema
+.\instalar-kokoro.ps1     # modelo (310 MB) y voces (27 MB)
+```
+
+```json
+"voz": { "proveedor": "kokoro", "modelo": "em_alex", "procesar": true }
+```
+
+Voces: `em_alex` y `em_santa` (masculinas), `ef_dora` (femenina).
+
+Sintetiza a unas dos veces el tiempo real frente a las diez de Piper —medido,
+8.5 s de audio en 4.8 s— pero en un video de varios minutos veinte segundos más
+no cambian nada.
+
+Compara todas en `muestras-voz/comparar.html`.
