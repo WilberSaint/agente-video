@@ -210,3 +210,74 @@ func TestGenerarASSFallaConSRTVacio(t *testing.T) {
 		t.Fatal("esperaba error con un SRT sin subtítulos")
 	}
 }
+
+// En español la mitad de las palabras son artículos y preposiciones de dos o
+// tres letras. Mostrarlas solas a pantalla completa se lee como un error, no
+// como un subtítulo: se comprobó viendo "el" solo en medio de un fotograma.
+func TestPalabrasVaciasNoSalenSolas(t *testing.T) {
+	entrada := []palabra{
+		{texto: "Al", inicio: 0, fin: 100 * time.Millisecond},
+		{texto: "final", inicio: 100 * time.Millisecond, fin: 400 * time.Millisecond},
+		{texto: "no", inicio: 400 * time.Millisecond, fin: 500 * time.Millisecond},
+		{texto: "construyes", inicio: 500 * time.Millisecond, fin: 900 * time.Millisecond},
+		{texto: "un", inicio: 900 * time.Millisecond, fin: 1000 * time.Millisecond},
+		{texto: "cuerpo", inicio: 1000 * time.Millisecond, fin: 1400 * time.Millisecond},
+	}
+	got := unirPalabrasVacias(entrada)
+
+	quiero := []string{"Al final", "no construyes", "un cuerpo"}
+	if len(got) != len(quiero) {
+		t.Fatalf("%d grupos, esperaba %d: %+v", len(got), len(quiero), got)
+	}
+	for i, q := range quiero {
+		if got[i].texto != q {
+			t.Errorf("grupo %d = %q, esperaba %q", i, got[i].texto, q)
+		}
+	}
+	// La sincronía debe conservarse: cada grupo empieza con su primera palabra
+	// y acaba con la última.
+	if got[0].inicio != 0 || got[0].fin != 400*time.Millisecond {
+		t.Errorf("tiempos del primer grupo = %v-%v", got[0].inicio, got[0].fin)
+	}
+}
+
+func TestVariasVaciasSeguidasSeAcumulan(t *testing.T) {
+	entrada := []palabra{
+		{texto: "y", inicio: 0, fin: 100 * time.Millisecond},
+		{texto: "de", inicio: 100 * time.Millisecond, fin: 200 * time.Millisecond},
+		{texto: "la", inicio: 200 * time.Millisecond, fin: 300 * time.Millisecond},
+		{texto: "montaña", inicio: 300 * time.Millisecond, fin: 700 * time.Millisecond},
+	}
+	got := unirPalabrasVacias(entrada)
+	if len(got) != 1 || got[0].texto != "y de la montaña" {
+		t.Fatalf("obtuve %+v", got)
+	}
+}
+
+// Si el texto acaba en palabra vacía no hay a quién pegarla; se une a la
+// anterior antes que descartarla, porque perder texto es peor que un grupo largo.
+func TestVaciaFinalSeUneALaAnterior(t *testing.T) {
+	entrada := []palabra{
+		{texto: "camina", inicio: 0, fin: 400 * time.Millisecond},
+		{texto: "más", inicio: 400 * time.Millisecond, fin: 600 * time.Millisecond},
+	}
+	got := unirPalabrasVacias(entrada)
+	if len(got) != 1 || got[0].texto != "camina más" {
+		t.Fatalf("obtuve %+v", got)
+	}
+	if got[0].fin != 600*time.Millisecond {
+		t.Errorf("el fin no se extendió: %v", got[0].fin)
+	}
+}
+
+// La puntuación no debe impedir reconocer una palabra vacía.
+func TestVaciaConPuntuacion(t *testing.T) {
+	entrada := []palabra{
+		{texto: "¿Y", inicio: 0, fin: 100 * time.Millisecond},
+		{texto: "ahora?", inicio: 100 * time.Millisecond, fin: 500 * time.Millisecond},
+	}
+	got := unirPalabrasVacias(entrada)
+	if len(got) != 1 || got[0].texto != "¿Y ahora?" {
+		t.Fatalf("obtuve %+v", got)
+	}
+}

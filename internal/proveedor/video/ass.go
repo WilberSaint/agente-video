@@ -122,20 +122,76 @@ func eventosPop(b *strings.Builder, grupos []grupo, s perfil.Subtitulos) {
 	}
 }
 
-// eventosPalabraAPalabra muestra una sola palabra a la vez, con el mismo
-// rebote. Es el formato más agresivo y el que mejor retiene en vertical.
+// eventosPalabraAPalabra muestra una palabra a la vez, con el mismo rebote. Es
+// el formato más agresivo y el que mejor retiene en vertical.
 func eventosPalabraAPalabra(b *strings.Builder, palabras []palabra, s perfil.Subtitulos) {
-	for i, p := range palabras {
-		fin := p.fin
-		// Estirar hasta la siguiente palabra evita parpadeos entre huecos
-		// cortos, pero sin dejar una palabra colgada en un silencio largo.
-		if i+1 < len(palabras) {
-			if hueco := palabras[i+1].inicio - p.fin; hueco > 0 && hueco < 400*time.Millisecond {
-				fin = palabras[i+1].inicio
+	grupos := unirPalabrasVacias(palabras)
+	for i, g := range grupos {
+		fin := g.fin
+		// Estirar hasta la siguiente evita parpadeos entre huecos cortos, sin
+		// dejar una palabra colgada durante un silencio largo.
+		if i+1 < len(grupos) {
+			if hueco := grupos[i+1].inicio - g.fin; hueco > 0 && hueco < 400*time.Millisecond {
+				fin = grupos[i+1].inicio
 			}
 		}
-		dialogo(b, p.inicio, fin, tagsPop(s), p.texto)
+		dialogo(b, g.inicio, fin, tagsPop(s), g.texto)
 	}
+}
+
+// palabrasVacias son las que no dicen nada por sí solas. En español son
+// muchísimas y muy cortas, y mostrarlas aisladas a pantalla completa —"el",
+// "de", "que"— se lee como un error, no como un subtítulo.
+var palabrasVacias = map[string]bool{
+	"el": true, "la": true, "los": true, "las": true, "un": true, "una": true,
+	"unos": true, "unas": true, "de": true, "del": true, "al": true, "a": true,
+	"en": true, "y": true, "o": true, "que": true, "se": true, "su": true,
+	"sus": true, "lo": true, "le": true, "les": true, "con": true, "por": true,
+	"para": true, "es": true, "no": true, "ni": true, "mi": true, "tu": true,
+	"me": true, "te": true, "sin": true, "ya": true, "si": true, "más": true,
+}
+
+// unirPalabrasVacias pega cada palabra vacía a la siguiente, de modo que nunca
+// aparece sola en pantalla. Se conservan los tiempos: empieza cuando empieza la
+// primera y acaba cuando acaba la última, así la sincronía con la voz se mantiene.
+func unirPalabrasVacias(palabras []palabra) []palabra {
+	var out []palabra
+	var pendiente *palabra
+
+	for _, p := range palabras {
+		limpia := strings.ToLower(strings.Trim(p.texto, ".,;:¿?¡!—-«»\"'"))
+
+		if pendiente != nil {
+			pendiente.texto += " " + p.texto
+			pendiente.fin = p.fin
+			// Dos vacías seguidas se acumulan hasta encontrar una con peso.
+			if palabrasVacias[limpia] {
+				continue
+			}
+			out = append(out, *pendiente)
+			pendiente = nil
+			continue
+		}
+
+		if palabrasVacias[limpia] {
+			copia := p
+			pendiente = &copia
+			continue
+		}
+		out = append(out, p)
+	}
+
+	// Si el texto acaba en palabra vacía no hay a quién pegarla; se muestra con
+	// la anterior antes que descartarla.
+	if pendiente != nil {
+		if len(out) > 0 {
+			out[len(out)-1].texto += " " + pendiente.texto
+			out[len(out)-1].fin = pendiente.fin
+		} else {
+			out = append(out, *pendiente)
+		}
+	}
+	return out
 }
 
 // eventosKaraoke deja la línea completa en pantalla y resalta la palabra que
