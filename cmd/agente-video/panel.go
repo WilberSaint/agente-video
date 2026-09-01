@@ -69,6 +69,10 @@ func cmdServir(ctx context.Context, args []string) error {
 			Titulo: res.Guion.Titulo,
 			Video:  res.VideoFinal,
 			Textos: strings.TrimSuffix(res.VideoFinal, ".mp4") + ".txt",
+			Publicacion: trabajos.Publicacion{
+				Titulo:      res.Guion.TituloPublicable(),
+				Descripcion: res.Guion.DescripcionPublicable(),
+			},
 		}, nil
 	}
 

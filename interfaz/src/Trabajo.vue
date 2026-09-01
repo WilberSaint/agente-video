@@ -6,6 +6,20 @@ defineEmits(['cancelar', 'olvidar', 'reintentar'])
 
 const abierto = ref(false)
 const verRegistro = ref(false)
+const copiado = ref('')
+
+// El portapapeles solo existe en contextos seguros; 127.0.0.1 cuenta como tal,
+// pero si algún día se sirve por red plana hay que dejar el texto seleccionable
+// en vez de fallar en silencio.
+async function copiar(cual, texto) {
+  try {
+    await navigator.clipboard.writeText(texto)
+    copiado.value = cual
+    setTimeout(() => (copiado.value = ''), 1800)
+  } catch (e) {
+    copiado.value = ''
+  }
+}
 
 const etiquetas = {
   en_cola: 'en cola',
@@ -94,8 +108,24 @@ const restante = computed(() => {
     <div v-if="t.estado === 'terminado' && t.video" class="resultado">
       <button v-if="!abierto" @click="abierto = true">Ver video</button>
       <video v-else :src="`/media/${t.id}/video`" controls playsinline></video>
+      <div v-if="t.publicacion" class="publicacion">
+        <div class="campo">
+          <span class="etiqueta">Título</span>
+          <p class="valor">{{ t.publicacion.titulo }}</p>
+          <button class="tenue pequeno" @click="copiar('titulo', t.publicacion.titulo)">
+            {{ copiado === 'titulo' ? 'copiado' : 'copiar' }}
+          </button>
+        </div>
+        <div class="campo">
+          <span class="etiqueta">Descripción</span>
+          <p class="valor">{{ t.publicacion.descripcion }}</p>
+          <button class="tenue pequeno" @click="copiar('desc', t.publicacion.descripcion)">
+            {{ copiado === 'desc' ? 'copiado' : 'copiar' }}
+          </button>
+        </div>
+      </div>
       <a :href="`/media/${t.id}/textos`" target="_blank" class="enlace pequeno">
-        título, descripción y hashtags
+        abrir como archivo
       </a>
     </div>
 
@@ -149,6 +179,18 @@ h3 { margin: 6px 0 0; font-size: 16px; font-weight: 600; line-height: 1.35; }
 .resultado { margin-top: 13px; display: flex; flex-direction: column; gap: 9px; align-items: start; }
 video { width: 100%; max-width: 300px; border-radius: 8px; background: #000; display: block; }
 .enlace { color: var(--acento); }
+
+.publicacion { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.campo {
+  border: 1px solid var(--linea); border-radius: 8px; padding: 9px 11px;
+  display: flex; flex-direction: column; align-items: start; gap: 5px;
+}
+.campo .etiqueta {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--suave);
+}
+/* pre-wrap porque la descripción trae el salto de línea antes de los hashtags,
+   y esa separación es justo lo que se pega. */
+.campo .valor { margin: 0; font-size: 14px; white-space: pre-wrap; }
 .rehacer:hover { color: var(--acento); }
 
 .registro { margin-top: 10px; }

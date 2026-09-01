@@ -349,17 +349,12 @@ func componerPrompt(p *perfil.Perfil, prompt string) string {
 
 // escribirMetadatos deja título, descripción y hashtags junto al video, listos
 // para copiar y pegar al publicar.
+// Van con encabezado porque el archivo se abre para copiar dos campos
+// distintos: sin separarlos hay que adivinar dónde acaba uno y empieza el otro.
 func (pl *Pipeline) escribirMetadatos(rutaVideo string, g *proveedor.GuionGenerado) {
-	txt := fmt.Sprintf("%s\n\n%s\n\n%s\n", g.Titulo, g.Descripcion, hashtags(g.Hashtags))
+	txt := fmt.Sprintf("TÍTULO\n%s\n\nDESCRIPCIÓN\n%s\n",
+		g.TituloPublicable(), g.DescripcionPublicable())
 	_ = os.WriteFile(strings.TrimSuffix(rutaVideo, ".mp4")+".txt", []byte(txt), 0o644)
-}
-
-func hashtags(hs []string) string {
-	out := make([]string, 0, len(hs))
-	for _, h := range hs {
-		out = append(out, "#"+strings.TrimPrefix(h, "#"))
-	}
-	return strings.Join(out, " ")
 }
 
 var noAlfanumerico = regexp.MustCompile("[^a-z0-9]+")

@@ -45,11 +45,12 @@ type Trabajo struct {
 	Inicio *time.Time `json:"inicio,omitempty"`
 	Fin    *time.Time `json:"fin,omitempty"`
 
-	Error     string `json:"error,omitempty"`
-	Titulo    string `json:"titulo,omitempty"`
-	Video     string `json:"video,omitempty"`     // ruta en disco
-	Miniatura string `json:"miniatura,omitempty"` // ruta en disco
-	Textos    string `json:"textos,omitempty"`
+	Error       string      `json:"error,omitempty"`
+	Titulo      string      `json:"titulo,omitempty"`
+	Publicacion Publicacion `json:"publicacion,omitempty"`
+	Video       string      `json:"video,omitempty"`     // ruta en disco
+	Miniatura   string      `json:"miniatura,omitempty"` // ruta en disco
+	Textos      string      `json:"textos,omitempty"`
 
 	// Carpeta es el identificador del directorio de checkpoints. Se fija en el
 	// primer intento y se conserva: sin esto, un trabajo reencolado tras un
@@ -66,9 +67,10 @@ const maxRegistro = 60
 
 // Resultado es lo que devuelve el ejecutor cuando un trabajo sale bien.
 type Resultado struct {
-	Titulo string
-	Video  string
-	Textos string
+	Titulo      string
+	Publicacion Publicacion
+	Video       string
+	Textos      string
 }
 
 // Ejecutor hace el trabajo de verdad. Se inyecta para que este paquete no
@@ -229,6 +231,7 @@ func (c *Cola) correr(padre context.Context, t *Trabajo) {
 		t.Progreso = 1
 		if res != nil {
 			t.Titulo = res.Titulo
+			t.Publicacion = res.Publicacion
 			t.Video = res.Video
 			t.Textos = res.Textos
 		}
@@ -514,4 +517,11 @@ func sanear(s string, max int) string {
 		return "video"
 	}
 	return string(b)
+}
+
+// Publicacion es el texto listo para pegar al subir el video. Viaja con el
+// trabajo hasta el panel para no obligar a abrir el .txt en disco.
+type Publicacion struct {
+	Titulo      string `json:"titulo,omitempty"`
+	Descripcion string `json:"descripcion,omitempty"`
 }
