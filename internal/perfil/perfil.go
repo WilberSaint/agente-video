@@ -52,6 +52,14 @@ type Voz struct {
 	// generado. Es lo que más acerca el resultado a una voz grabada.
 	Procesar  bool    `json:"procesar"`
 	Presencia float64 `json:"presencia"` // dB de realce en 3.2 kHz
+
+	// LimiteCaracteres es la cuota mensual del proveedor de pago. Al agotarse
+	// se pasa solo al de respaldo en vez de dejar el lote a medias: un video
+	// con peor voz es mejor que diez videos sin generar.
+	LimiteCaracteres int `json:"limite_caracteres"`
+	// Respaldo es el proveedor al que caer. Vacío = piper.
+	Respaldo       string `json:"respaldo"`
+	ModeloRespaldo string `json:"modelo_respaldo"`
 }
 
 type Subtitulos struct {

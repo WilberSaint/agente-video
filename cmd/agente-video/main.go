@@ -34,6 +34,15 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Las credenciales pueden venir de un .env junto al ejecutable, para no
+	// tener que recordar los comandos de PowerShell. El entorno real gana
+	// siempre: el .env es comodidad, no autoridad.
+	if n, err := credenciales.CargarEnv(".env"); err != nil {
+		fmt.Fprintf(os.Stderr, "aviso: %v\n", err)
+	} else if n > 0 {
+		fmt.Fprintf(os.Stderr, "%d variable(s) cargadas de .env\n", n)
+	}
+
 	// Ctrl+C cancela limpiamente: los checkpoints ya escritos se conservan.
 	ctx, cancelar := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancelar()
@@ -331,8 +340,18 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 	case "elevenlabs":
 		// El id de la voz va en voz.modelo, igual que la ruta del .onnx en
 		// Piper: para el perfil es "qué voz", y cada proveedor lo interpreta.
-		provs.Locutor = voz.NuevoElevenLabs(
+		principal := voz.NuevoElevenLabs(
 			os.Getenv("ELEVENLABS_API_KEY"), p.Voz.Modelo, "")
+
+		// Un proveedor de pago sin respaldo deja el lote a medias en cuanto se
+		// agota la cuota, y eso suele descubrirse a la mañana siguiente.
+		provs.Locutor = &voz.ConRespaldo{
+			Principal:      principal,
+			Respaldo:       voz.NuevoPiper(),
+			Contador:       voz.NuevoContador(filepath.Join("trabajo", "consumo-voz.json")),
+			Limite:         p.Voz.LimiteCaracteres,
+			ModeloRespaldo: p.RutaRelativa(modeloRespaldo(p)),
+		}
 	default:
 		return provs, fmt.Errorf("proveedor de voz desconocido: %q", p.Voz.Proveedor)
 	}
@@ -351,3 +370,13 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 }
 
 func flagSet(nombre string) *flag.FlagSet { return flag.NewFlagSet(nombre, flag.ExitOnError) }
+
+// modeloRespaldo devuelve la voz local a la que caer cuando se agota la cuota
+// del proveedor de pago. Si el perfil no lo indica, se usa la voz instalada por
+// defecto: tener un respaldo mediocre configurado solo es mejor que no tenerlo.
+func modeloRespaldo(p *perfil.Perfil) string {
+	if p.Voz.ModeloRespaldo != "" {
+		return p.Voz.ModeloRespaldo
+	}
+	return "../../bin/voces/es_MX-claude-high.onnx"
+}
