@@ -22,6 +22,11 @@ type Guion struct {
 	DuracionSeg int    `json:"duracion_seg"`
 	Escenas     int    `json:"escenas"`
 	Extra       string `json:"instrucciones_extra"`
+
+	// Carpeta es dónde buscar guiones ya escritos antes de pagar por uno. Un
+	// guion escrito a mano cuesta cero y sale igual de bueno; la API se paga
+	// por estar disponible de madrugada, no por escribir mejor.
+	Carpeta string `json:"carpeta,omitempty"`
 }
 
 type Imagen struct {

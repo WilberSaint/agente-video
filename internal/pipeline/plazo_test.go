@@ -2,6 +2,7 @@ package pipeline
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -55,5 +56,45 @@ func TestSinPlazoExplicitoSePoneElPorDefecto(t *testing.T) {
 	pl := Nuevo(Proveedores{}, Opciones{})
 	if pl.opt.PlazoMaximo != plazoPorDefecto {
 		t.Errorf("PlazoMaximo = %v, se esperaba %v", pl.opt.PlazoMaximo, plazoPorDefecto)
+	}
+}
+
+// Pollinations solo admite una petición por IP a la vez. Reintentar un 429 a
+// los tres segundos vuelve a chocar con la misma cola y agota los intentos sin
+// haber esperado de verdad: fue lo que tumbó dos videos seguidos.
+func TestEsperaDeReintentoDaMasMargenAlSaturarse(t *testing.T) {
+	saturado := errors.New(`pollinations devolvió 429: {"error":"Too Many Requests"}`)
+	otro := errors.New("connection reset by peer")
+
+	for intento := 1; intento <= 3; intento++ {
+		conCola := esperaDeReintento(saturado, intento)
+		normal := esperaDeReintento(otro, intento)
+		if conCola <= normal {
+			t.Errorf("intento %d: 429 esperó %v y un error normal %v; debería esperar más",
+				intento, conCola, normal)
+		}
+	}
+	// Los tres intentos juntos tienen que cubrir de sobra el tiempo que tarda
+	// otro video en soltar la cola.
+	var total time.Duration
+	for intento := 1; intento <= 3; intento++ {
+		total += esperaDeReintento(saturado, intento)
+	}
+	if total < time.Minute {
+		t.Errorf("los tres reintentos suman %v; es poco para que se libere la cola", total)
+	}
+}
+
+func TestDormirVuelveAlCancelar(t *testing.T) {
+	pl := Nuevo(Proveedores{}, Opciones{Registro: func(string, ...any) {}})
+	ctx, cancelar := context.WithCancel(context.Background())
+	cancelar()
+
+	hecho := make(chan struct{})
+	go func() { pl.dormir(ctx, time.Hour); close(hecho) }()
+	select {
+	case <-hecho:
+	case <-time.After(2 * time.Second):
+		t.Fatal("dormir ignoró la cancelación; parar un trabajo tardaría una hora")
 	}
 }

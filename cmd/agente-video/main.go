@@ -353,6 +353,11 @@ func construirProveedores(p *perfil.Perfil) (pipeline.Proveedores, error) {
 		os.Getenv("ANTHROPIC_API_KEY"),
 		os.Getenv("ANTHROPIC_WORKSPACE_ID"),
 		"")
+	// Con carpeta configurada, la API pasa a ser el suplente: solo escribe los
+	// guiones que no estaban ya hechos.
+	if p.Guion.Carpeta != "" {
+		provs.Guionista = guion.NuevoCarpeta(p.RutaRelativa(p.Guion.Carpeta), provs.Guionista)
+	}
 
 	switch p.Imagen.Proveedor {
 	case "local":

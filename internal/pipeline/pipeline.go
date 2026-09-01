@@ -295,7 +295,7 @@ func (pl *Pipeline) etapaImagenes(ctx context.Context, p *perfil.Perfil,
 					pl.opt.Registro("      el error no cambia reintentando; se aborta")
 					break
 				}
-				time.Sleep(time.Duration(intento*3) * time.Second)
+				pl.dormir(ctx, esperaDeReintento(err, intento))
 			}
 			if err != nil {
 				return nil, fmt.Errorf("escena %d plano %d tras %d intentos: %w",
@@ -490,4 +490,32 @@ func sujetosRecurrentes(g *proveedor.GuionGenerado) []string {
 	}
 	sort.Strings(out) // orden estable: el aviso no debe bailar entre ejecuciones
 	return out
+}
+
+// esperaDeReintento decide cuánto aguardar antes de volver a intentarlo.
+//
+// Un 429 no es un fallo del servicio: es que le estamos pidiendo demasiado
+// rápido. Pollinations solo admite una petición por IP a la vez, y reintentar
+// a los tres segundos vuelve a chocar con la misma cola. Por eso ese caso
+// espera mucho más que un error de red cualquiera, donde alargar la espera
+// solo haría el video más lento sin arreglar nada.
+func esperaDeReintento(err error, intento int) time.Duration {
+	if err != nil && strings.Contains(err.Error(), "429") {
+		return time.Duration(intento*20) * time.Second
+	}
+	return time.Duration(intento*3) * time.Second
+}
+
+// dormir espera sin dejar de atender una cancelación: con esperas de un minuto,
+// un time.Sleep haría que parar el trabajo tardase en notarse.
+func (pl *Pipeline) dormir(ctx context.Context, d time.Duration) {
+	if d <= 0 {
+		return
+	}
+	t := time.NewTimer(d)
+	defer t.Stop()
+	select {
+	case <-t.C:
+	case <-ctx.Done():
+	}
 }
