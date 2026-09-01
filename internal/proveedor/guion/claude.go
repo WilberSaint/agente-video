@@ -91,9 +91,15 @@ TEXTO DE PUBLICACIÓN
 
 - El título es lo que decide si alguien para de deslizar: concreto y con una
   promesa o una tensión. Nada de títulos genéricos tipo "Reflexión del día".
-- La descripción acompaña al video en la publicación. Puede rematar la idea,
-  dejar una pregunta o invitar a comentar. No repitas el título palabra por
-  palabra.
+- La descripción acompaña al video en la publicación. No repitas el título
+  palabra por palabra.
+- El cierre de la descripción tiene que salir de ESTE video en concreto: un
+  detalle suyo, una pregunta que solo tenga sentido sabiendo lo que se cuenta,
+  un dato que se quedó fuera. Prohibido rematar con fórmulas intercambiables
+  que valdrían para cualquier otro video: "cuéntame qué habrías hecho tú",
+  "¿tú qué opinas?", "déjalo en los comentarios", "sígueme para más". Cada
+  guion se escribe sin ver los anteriores, así que un cierre genérico sale
+  idéntico una y otra vez; uno anclado al contenido no se puede repetir.
 - Los hashtags describen el CONTENIDO. No pongas etiquetas de alcance genéricas
   (viral, fyp, parati, foryou): esas se añaden solas después, y una que gastes
   ahí es una que no describe el video.

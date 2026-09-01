@@ -403,6 +403,17 @@ go test ./internal/proveedor/imagen -run EnVivo -v     # pega contra el servicio
 go test -short ./...                                   # salta las que necesitan red
 ```
 
+Para juzgar un cambio en el prompt del guionista hace falta ver varios guiones
+seguidos, y esperar tres renders son cuarenta minutos y las imágenes de los tres.
+`probar-guion` pide los guiones y enseña solo el texto de publicación:
+
+```powershell
+go run .\cmd\probar-guion historias "un tema" "otro tema" "un tercero"
+```
+
+Es la forma de detectar que todos los videos cierran con la misma frase, que no
+se ve mirando uno solo.
+
 ---
 
 ## Rendimiento
