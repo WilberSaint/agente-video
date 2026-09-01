@@ -1,0 +1,39 @@
+AQUÍ VAN LAS IMÁGENES DEL PERSONAJE
+===================================
+
+Pon aquí tus imágenes. Sirve cualquier formato: .png, .jpg o .webp.
+
+DOS MODOS
+---------
+
+1) UNA SOLA IMAGEN
+   Deja un archivo y apunta a él en el perfil:
+       "imagen": "personaje/mi-perrito.png"
+
+2) VARIAS EXPRESIONES  (recomendado)
+   Deja varias imágenes y apunta a la CARPETA:
+       "imagen": "personaje/"
+   El agente reparte una expresión por escena, en orden alfabético y
+   volviendo a empezar cuando se acaban. Con 4 expresiones y 7 escenas:
+       escena 1 -> 01   escena 5 -> 01
+       escena 2 -> 02   escena 6 -> 02
+       escena 3 -> 03   escena 7 -> 03
+       escena 4 -> 04
+
+   Nómbralas para controlar el orden:
+       01-neutral.png
+       02-sorprendido.png
+       03-pensativo.png
+       04-sonriendo.png
+
+QUÉ IMÁGENES FUNCIONAN MEJOR
+----------------------------
+- Un PNG con fondo transparente es lo ideal. Usa "forma": "recorte".
+- Sin transparencia, usa "forma": "circulo" (por defecto): recorta en círculo
+  y queda bien con cualquier imagen.
+- Caricaturas, stickers, mascotas y avatares funcionan mejor que fotos
+  realistas: se leen al instante aunque ocupen poco en pantalla.
+- Cuadradas o verticales. El agente recorta por el centro-arriba.
+- Que la cara ocupe buena parte de la imagen: en pantalla mide unos 350 px.
+
+Este archivo lo ignora el agente; puedes borrarlo.

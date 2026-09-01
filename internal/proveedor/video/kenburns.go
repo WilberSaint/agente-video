@@ -87,22 +87,22 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	for _, img := range imagenes {
 		args = append(args, "-i", img)
 	}
-	// El personaje entra como imagen fija antes del audio, para que su índice
-	// no dependa de cuántas pistas de sonido acabe habiendo.
+	// Las expresiones del personaje entran como imágenes fijas antes del
+	// audio, para que sus índices no dependan de cuántas pistas de sonido
+	// acabe habiendo.
+	expresiones := expresionesDe(p)
 	idxPersonaje := -1
-	if rp := p.RutaRelativa(p.Personaje.Imagen); rp != "" {
-		if _, err := os.Stat(rp); err == nil {
-			idxPersonaje = n
-			args = append(args, "-i", rp)
-		} else {
-			k.avisar("no se encontró la imagen del personaje %s; se omite", rp)
+	if len(expresiones) > 0 {
+		idxPersonaje = n
+		for _, e := range expresiones {
+			args = append(args, "-i", e)
 		}
+	} else if p.Personaje.Imagen != "" {
+		k.avisar("no se encontró ninguna imagen de personaje en %s; se omite",
+			p.RutaRelativa(p.Personaje.Imagen))
 	}
 
-	idxAudio := n
-	if idxPersonaje >= 0 {
-		idxAudio = n + 1
-	}
+	idxAudio := n + len(expresiones)
 	args = append(args, "-i", req.Audio)
 
 	// La mezcla decide qué entradas de audio más hacen falta (música, efectos)
@@ -195,12 +195,14 @@ func (k *KenBurns) Ensamblar(ctx context.Context, req proveedor.PeticionVideo) e
 	// El personaje va encima de todo, subtítulos incluidos: es la capa más
 	// cercana al espectador y no debe quedar tapada por el texto.
 	if idxPersonaje >= 0 {
-		fPj, salida := filtroPersonaje(p, idxPersonaje, ultimo, palabras, duracionAudio)
+		turnos := turnosDeExpresion(req.Escenas, tramos, len(expresiones))
+		fPj, salida := filtroPersonaje(p, idxPersonaje, ultimo, palabras,
+			duracionAudio, expresiones, turnos)
 		if fPj != "" {
 			filtros = append(filtros, fPj)
 			ultimo = salida
-			k.avisar("personaje superpuesto (%s, animación %q)",
-				p.Personaje.Imagen, p.Personaje.Animacion)
+			k.avisar("personaje: %d expresión(es), animación %q",
+				len(expresiones), p.Personaje.Animacion)
 		}
 	}
 

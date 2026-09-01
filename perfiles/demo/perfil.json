@@ -58,7 +58,7 @@
     "efectos_en": "escena"
   },
   "personaje": {
-    "imagen": "personaje/narrador.jpg",
+    "imagen": "personaje/",
     "posicion": "abajo-derecha",
     "alto_pct": 19,
     "margen": 44,

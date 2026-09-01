@@ -34,13 +34,11 @@ const (
 // cadena vacía si el perfil no define ninguno. entradaIdx es el índice de la
 // imagen del personaje entre las entradas de ffmpeg.
 func filtroPersonaje(p *perfil.Perfil, entradaIdx int, etiquetaEntrada string,
-	palabras []palabra, duracion float64) (filtro, salida string) {
+	palabras []palabra, duracion float64,
+	expresiones []string, turnos []turno) (filtro, salida string) {
 
 	pj := p.Personaje
-	if pj.Imagen == "" {
-		return "", etiquetaEntrada
-	}
-	if _, err := os.Stat(p.RutaRelativa(pj.Imagen)); err != nil {
+	if len(expresiones) == 0 {
 		return "", etiquetaEntrada
 	}
 
@@ -58,17 +56,52 @@ func filtroPersonaje(p *perfil.Perfil, entradaIdx int, etiquetaEntrada string,
 		opacidad = 1
 	}
 
-	var partes []string
-	partes = append(partes, fmt.Sprintf("[%d:v]%s[pj]",
-		entradaIdx, cadenaForma(pj, alto, opacidad)))
-
 	x := posicionX(pj.Posicion, margen)
 	y := expresionY(pj.Animacion, margen, palabras, duracion)
 
-	partes = append(partes, fmt.Sprintf("[%s][pj]overlay=x=%s:y=%s[conpj]",
-		etiquetaEntrada, x, y))
+	// En ffmpeg una etiqueta de salida solo se puede consumir UNA vez. Como las
+	// expresiones rotan, la misma imagen vuelve a usarse en escenas posteriores,
+	// y hay que duplicarla con split tantas veces como turnos la reclamen. Sin
+	// esto el personaje aparece en las primeras escenas y desaparece después.
+	usos := make([]int, len(expresiones))
+	for _, t := range turnos {
+		usos[t.imagen]++
+	}
 
-	return strings.Join(partes, ";"), "conpj"
+	var partes []string
+	for i := range expresiones {
+		if usos[i] == 0 {
+			continue // una expresión que no le toca a ninguna escena
+		}
+		cadena := fmt.Sprintf("[%d:v]%s", entradaIdx+i, cadenaForma(pj, alto, opacidad))
+		if usos[i] == 1 {
+			partes = append(partes, cadena+fmt.Sprintf("[pj%d_0]", i))
+			continue
+		}
+		var etiquetas strings.Builder
+		for k := 0; k < usos[i]; k++ {
+			fmt.Fprintf(&etiquetas, "[pj%d_%d]", i, k)
+		}
+		partes = append(partes, fmt.Sprintf("%s,split=%d%s", cadena, usos[i], etiquetas.String()))
+	}
+
+	// Se encadenan tantas superposiciones como turnos, cada una activa solo
+	// durante su tramo. Con una única expresión no hay condición de tiempo.
+	copia := make([]int, len(expresiones))
+	entrada := etiquetaEntrada
+	for i, t := range turnos {
+		salida := fmt.Sprintf("cpj%d", i)
+		enable := ""
+		if len(turnos) > 1 {
+			enable = fmt.Sprintf(":enable='between(t,%.2f,%.2f)'", t.inicio, t.fin)
+		}
+		partes = append(partes, fmt.Sprintf("[%s][pj%d_%d]overlay=x=%s:y=%s%s[%s]",
+			entrada, t.imagen, copia[t.imagen], x, y, enable, salida))
+		copia[t.imagen]++
+		entrada = salida
+	}
+
+	return strings.Join(partes, ";"), entrada
 }
 
 func posicionX(posicion string, margen int) string {
